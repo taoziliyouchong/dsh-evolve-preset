@@ -1,0 +1,50 @@
+{
+  "name": "dsh-profile-inject",
+  "version": "0.1.0",
+  "description": "开场把用户画像注入上下文：通用画像正文 + 任务画像类别清单，按会话实时模式收口，可截断、可按工作空间绑定任务画像。",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "peerDependencies": {
+    "@deepseek-ai/dsh-llm": ">=0.2.1-alpha.1"
+  },
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0",
+    "dsh": ">=0.2.1-alpha.1"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "profile",
+    "context"
+  ],
+  "author": "taoziliyouchong",
+  "license": "MIT",
+  "scripts": {
+    "check": "node --check index.js",
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/taoziliyouchong/dsh-evolve-preset"
+  },
+  "homepage": "https://github.com/taoziliyouchong/dsh-evolve-preset#readme",
+  "bugs": {
+    "url": "https://github.com/taoziliyouchong/dsh-evolve-preset/issues"
+  }
+}

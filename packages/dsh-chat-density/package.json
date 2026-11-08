@@ -1,0 +1,54 @@
+{
+  "name": "dsh-chat-density",
+  "version": "0.1.0",
+  "description": "把聊天区里「对齐栏」与「收尾检测」两块的字号、行距、颜色统一调小变淡，正文保持原样。",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "cordis.patch.yml",
+    "src",
+    "lib/client.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0",
+    "dsh": ">=0.2.1-alpha.1"
+  },
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "inject": []
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "ui",
+    "css"
+  ],
+  "author": "taoziliyouchong",
+  "license": "MIT",
+  "scripts": {
+    "check": "node --check index.js",
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/taoziliyouchong/dsh-evolve-preset"
+  },
+  "homepage": "https://github.com/taoziliyouchong/dsh-evolve-preset#readme",
+  "bugs": {
+    "url": "https://github.com/taoziliyouchong/dsh-evolve-preset/issues"
+  }
+}

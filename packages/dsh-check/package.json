@@ -1,0 +1,52 @@
+{
+  "name": "dsh-check",
+  "version": "0.1.0",
+  "description": "三条自查工具：净版交付物扫过程痕迹词、画像文件做排版与跨层重复体检、关卡勾稽核对证据指针。",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "cordis.patch.yml",
+    "assets",
+    "README.md",
+    "LICENSE"
+  ],
+  "peerDependencies": {
+    "@deepseek-ai/dsh-tools": ">=0.2.1-alpha.1"
+  },
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0",
+    "dsh": ">=0.2.1-alpha.1"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "lint",
+    "profile",
+    "deliverable"
+  ],
+  "author": "taoziliyouchong",
+  "license": "MIT",
+  "scripts": {
+    "check": "node --check index.js",
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/taoziliyouchong/dsh-evolve-preset"
+  },
+  "homepage": "https://github.com/taoziliyouchong/dsh-evolve-preset#readme",
+  "bugs": {
+    "url": "https://github.com/taoziliyouchong/dsh-evolve-preset/issues"
+  }
+}

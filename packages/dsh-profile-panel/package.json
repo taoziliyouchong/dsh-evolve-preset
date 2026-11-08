@@ -1,0 +1,57 @@
+{
+  "name": "dsh-profile-panel",
+  "version": "0.1.0",
+  "description": "用户画像面板：名册、条目逐条编辑、结构、设置与原文；宿主半边提供读写路由，客户端走本机 HTTP。",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./invariant": "./invariant.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "invariant.js",
+    "cordis.patch.yml",
+    "src",
+    "lib/client.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0",
+    "dsh": ">=0.2.1-alpha.1"
+  },
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "inject": []
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "profile",
+    "settings",
+    "ui"
+  ],
+  "author": "taoziliyouchong",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/taoziliyouchong/dsh-evolve-preset"
+  },
+  "homepage": "https://github.com/taoziliyouchong/dsh-evolve-preset#readme",
+  "bugs": {
+    "url": "https://github.com/taoziliyouchong/dsh-evolve-preset/issues"
+  },
+  "scripts": {
+    "check": "node --check index.js",
+    "smoke": "node scripts/smoke.mjs"
+  }
+}

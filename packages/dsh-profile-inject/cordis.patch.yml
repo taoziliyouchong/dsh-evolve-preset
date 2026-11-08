@@ -1,0 +1,3 @@
+- insert:
+    - id: profile-inject
+      name: dsh-profile-inject

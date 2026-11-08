@@ -1,0 +1,6 @@
+url: https://github.com/taoziliyouchong/dsh-evolve-preset
+name: taoziliyouchong/dsh-evolve-preset
+category: workflow
+description:
+  en: "Session task tree: shows what is in progress, what each branch serves, and what else is pending, with a per-turn alignment bar."
+  zh: 会话任务树——现在做到哪、这活替谁做、旁边还有哪几件，每轮对齐栏由它注入。

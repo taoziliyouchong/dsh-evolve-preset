@@ -1,0 +1,7 @@
+url: https://github.com/taoziliyouchong/dsh-evolve-preset
+name: taoziliyouchong/dsh-evolve-preset
+category: ui
+description:
+  en: Shrinks and dims the alignment bar and closing-check blocks in chat, leaving the body untouched.
+  zh: 把聊天区里对齐栏与收尾检测两块调小调淡，正文保持原样。
+

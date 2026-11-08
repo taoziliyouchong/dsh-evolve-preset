@@ -1,0 +1,6 @@
+# dsh-plan-enter 作为独立插件挂载时用这一行。
+# 进化模式里它挂在 preset 的 planning 组（需要那组的 planMode 隔离实例）；
+# 那里已经有一行，不要再把本包单独加进 profile 的 bundles，否则会挂两次。
+- insert:
+    - id: plan-enter
+      name: dsh-plan-enter

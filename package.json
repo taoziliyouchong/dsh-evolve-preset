@@ -1,0 +1,23 @@
+{
+  "name": "dsh-evolve",
+  "version": "0.1.0",
+  "private": true,
+  "description": "进化模式整套发布件：一个 agent preset 加它依赖与配套的插件包，monorepo 管理，逐包发布到 npm。",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "smoke": "node scripts/smoke-all.mjs",
+    "publish:all": "node scripts/publish-all.mjs"
+  },
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "author": "taoziliyouchong",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/taoziliyouchong/dsh-evolve-preset"
+  }
+}

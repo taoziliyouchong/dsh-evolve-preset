@@ -1,0 +1,6 @@
+url: https://github.com/taoziliyouchong/dsh-evolve-preset
+name: taoziliyouchong/dsh-evolve-preset
+category: workflow
+description:
+  en: Gives the model an enter_plan_mode tool so it can switch the session into plan mode itself and hand over a full plan for approval.
+  zh: 给模型一个 enter_plan_mode 工具，自己把会话切进计划模式，再把完整计划交给你批。

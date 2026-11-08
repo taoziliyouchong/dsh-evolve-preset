@@ -1,0 +1,47 @@
+{
+  "name": "dsh-evolve-preset",
+  "version": "0.1.0",
+  "description": "让模型更准确地理解你的需求、能够用相同的花费实现明显更好的效果（即使只有一句话）、长期积累你的偏好的思维模式；由模式正文与配套插件配合实现，内容只在进化模式生效。",
+  "type": "module",
+  "files": [
+    "cordis.patch.yml",
+    "skills",
+    "README.md",
+    "README.en.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "dependencies": {
+    "dsh-term-dict": "*"
+  },
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0",
+    "dsh": ">=0.2.1-alpha.1"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "agent-preset",
+    "mode",
+    "persona",
+    "workflow"
+  ],
+  "author": "taoziliyouchong",
+  "license": "MIT",
+  "scripts": {
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/taoziliyouchong/dsh-evolve-preset"
+  },
+  "homepage": "https://github.com/taoziliyouchong/dsh-evolve-preset#readme",
+  "bugs": {
+    "url": "https://github.com/taoziliyouchong/dsh-evolve-preset/issues"
+  }
+}

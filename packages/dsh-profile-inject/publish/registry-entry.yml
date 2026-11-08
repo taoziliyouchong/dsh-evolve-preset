@@ -1,0 +1,6 @@
+url: https://github.com/taoziliyouchong/dsh-evolve-preset
+name: taoziliyouchong/dsh-evolve-preset
+category: session
+description:
+  en: Injects the user profile and task-profile index into context at session start, filtered by live preset, size and workspace.
+  zh: 开场把用户画像与任务画像清单注入上下文，按实时模式、体积与工作空间收口。

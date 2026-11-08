@@ -1,0 +1,6 @@
+url: https://github.com/taoziliyouchong/dsh-evolve-preset
+name: taoziliyouchong/dsh-evolve-preset
+category: dev
+description:
+  en: "Three lint tools: scan clean deliverables for process traces, check profile formatting and cross-layer duplicates, and reconcile gate evidence pointers."
+  zh: 三条自查工具——净版交付物扫过程痕迹词、画像文件查排版与跨层重复、关卡勾稽核对证据指针。

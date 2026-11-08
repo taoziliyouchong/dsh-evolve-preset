@@ -1,0 +1,6 @@
+url: https://github.com/taoziliyouchong/dsh-evolve-preset
+name: taoziliyouchong/dsh-evolve-preset
+category: ui
+description:
+  en: "Profile panel in settings: roster, per-entry editing, structure, injection settings and raw text, with local write routes on the host side."
+  zh: 设置里的用户画像面板：名册、条目逐条编辑、结构、注入设置与原文；宿主半边提供本机读写路由。
