@@ -4,38 +4,34 @@
  *
  * 一件事：把「关卡」从自报数字变成可核的条目。
  * 用法：
- *   node gate-check.mjs --init --session <id>      生成空白模板（$DSH_HOME/gate/<id>.md）
- *   node gate-check.mjs --file <模板.md>            校验模板，逐节给结论
+ *   node gate-check.mjs --init --session <id>      生成/重置模板（$DSH_HOME/gate/<id>.md）
+ *   node gate-check.mjs --file <模板.md>            校验模板（不删文件）
  *
  * 每节判三条：① 正文非空白字符 ≥ 10；② 有一行 EVID: 指针；③ 指针合法且文件类真实存在。
- * 第四节起 SKIP 超过 8 节判整轮没做。
+ * 只靠 SKIP 凑数的：SKIP 超过 2 节判整轮没做；全过才退出码 0。
+ * 文件留档：校验不删；下一次 --init 覆盖清掉。
  */
-import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { homedir } from 'node:os'
 
 const HOME = process.env.DSH_HOME || join(homedir(), '.dsh')
 const GATE_DIR = join(HOME, 'gate')
 const MIN_CHARS = 10
 const MIN_SKIP_REASON = 10
+const MAX_SKIP = 2
+const PLACEHOLDER = '回帖前补'
+const CIRCLED = ['①', '②', '③', '④', '⑤', '⑥', '⑦']
+const TO_NO = new Map(CIRCLED.map((c, i) => [c, String(i + 1).padStart(2, '0')]))
 
 const SECTIONS = [
-  ['01', '真实语义分析'],
-  ['02', '成不成立'],
+  ['01', '原件'],
+  ['02', '五问'],
   ['03', '对得上原有'],
-  ['04', '画像判别'],
-  ['05', '先看树'],
-  ['06', '任务'],
-  ['07', '接续'],
-  ['08', '归位与改枝'],
-  ['09', '本层目标'],
-  ['10', '硬需求'],
-  ['11', '反推'],
-  ['12', '基本点'],
-  ['13', '软需求'],
-  ['14', '对齐检查'],
-  ['15', '落盘与交接'],
-  ['16', '机器校验'],
+  ['04', '画像与词条'],
+  ['05', '目标与需求'],
+  ['06', '落盘'],
+  ['07', '升级与归纳'],
 ]
 
 function arg(name, def) {
@@ -46,7 +42,7 @@ function arg(name, def) {
 }
 
 function template(sessionId) {
-  const head = `# 关卡勾稽 · ${sessionId}\n\n> 每节：正文 ≥ ${MIN_CHARS} 个非空白字符 + 一行 EVID: 指针（文件:行 / tool:名字{参数} / cmd:命令 / SKIP:理由）。\n> 指针要能被核：文件路径必须真实存在。SKIP 要给具体理由（≥10 字）；16 节全 SKIP 判未做。\n\n`
+  const head = `# 关卡勾稽 · ${sessionId}\n\n> 节名照下：## 01 原件 … ## 07 升级与归纳。每节：正文 ≥ ${MIN_CHARS} 个非空白字符 + 一行 EVID: 指针（文件:行 / tool:名字{参数} / cmd:命令 / SKIP:理由）。\n> 前五节动手前写完，落盘、升级与归纳先写「${PLACEHOLDER}」，回帖前补成实据再校验。校验不删文件，下一次 init 覆盖。\n\n`
   const body = SECTIONS.map(([no, title]) => `## ${no} ${title}\nEVID:\n结论：\n`).join('\n')
   return head + body
 }
@@ -91,12 +87,14 @@ if (arg('init')) {
   const sid = arg('session') || 'session-unknown'
   mkdirSync(GATE_DIR, { recursive: true })
   const p = join(GATE_DIR, String(sid) + '.md')
-  if (!existsSync(p)) writeFileSync(p, template(String(sid)), 'utf8')
+  // 每次 init 都重建：上一轮的文档在这里被清掉，为这一轮让位。
+  if (existsSync(p)) rmSync(p, { force: true })
+  writeFileSync(p, template(String(sid)), 'utf8')
   console.log('模板: ' + p)
   process.exit(0)
 }
 
-// 刪除本会话的临时件（会话结束时用）
+// 清掉本会话的临时件（会话结束时用）
 if (arg('clean')) {
   const sid = String(arg('session') || '')
   if (!sid) { console.error('--clean 需要 --session <id>'); process.exit(2) }
@@ -123,10 +121,12 @@ const lines = text.split(/\r?\n/)
 const found = new Map()
 let cur = null
 for (const line of lines) {
-  const m = line.match(/^##\s+(\d{2})\s+(.+?)\s*$/)
+  const m = line.match(/^##\s+([0-9]{1,2}|[①②③④⑤⑥⑦⑧⑨⑩])\s*(.*)$/)
   if (m) {
-    cur = { no: m[1], title: m[2], body: [], evid: '' }
-    found.set(m[1], cur)
+    const no = /^\d+$/.test(m[1]) ? m[1].padStart(2, '0') : TO_NO.get(m[1])
+    if (!no) continue
+    cur = { no, title: m[2] || '', body: [], evid: '' }
+    found.set(no, cur)
     continue
   }
   if (!cur) continue
@@ -135,35 +135,36 @@ for (const line of lines) {
   cur.body.push(line)
 }
 
+const total = SECTIONS.length
 let pass = 0
 let skip = 0
+const failed = []
 const rows = []
 for (const [no, title] of SECTIONS) {
   const s = found.get(no)
-  if (!s) { rows.push(`${no} ${title}\t—\t缺这一节\t✗`); continue }
-  const chars = countChars(s.body.join('\n'))
+  if (!s) { rows.push(`${no} ${title}\t—\t缺这一节\t✗`); failed.push(no); continue }
+  const body = s.body.join('\n')
+  if (body.includes(PLACEHOLDER)) { rows.push(`${no} ${title}\t—\t还是前置占位「${PLACEHOLDER}」\t✗`); failed.push(no); continue }
+  const chars = countChars(body)
   const ev = checkEvid(s.evid)
   if (ev.skip) skip++
   const okChars = chars >= MIN_CHARS
   const ok = okChars && ev.ok
   if (ok) pass++
+  else failed.push(no)
   rows.push(`${no} ${title}\t${chars}字\t${okChars ? ev.why : '正文不足 ' + MIN_CHARS + ' 字'}\t${ok ? '✓' : '✗'}`)
 }
 
-const allSkip = pass === 0 && skip === total
-const total = SECTIONS.length
-const verdict = allSkip ? '✗ 未做（16 节全 SKIP）' : `${pass}/${total} ${pass === total ? '✅' : '✗'}`
+const skipHeavy = skip > MAX_SKIP
+const failedLabel = failed.map((n) => CIRCLED[Number(n) - 1]).join('')
+const verdict = skipHeavy
+  ? `未做（SKIP 超过 ${MAX_SKIP} 节）`
+  : `${pass}/${total}${pass === total ? ' ✅' : `（${failedLabel}未过）`}`
 
 console.log(rows.join('\n'))
 console.log('---')
 console.log('关卡：' + verdict)
-const allPass = pass === total && !allSkip
-// 不论过没过，正文发出前这一轮就作废：记一行日志，删掉模板。
-// 没过的红项已经打在工具输出里，下一轮要改就重新 init，不能靠旧文件复用。
-if (arg('finalize')) {
-  const sid = String(arg('session') || '')
-  if (sid) appendFileSync(join(GATE_DIR, sid + '.log'), `${new Date().toISOString()}\t${allPass ? '通过' : '未过'}\t${pass}/${total}\n`, 'utf8')
-  rmSync(file, { force: true })
-  console.log('本轮临时件已删除' + (sid ? '，日志: ' + join(GATE_DIR, sid + '.log') : ''))
-}
+const allPass = pass === total && !skipHeavy
+// 校验不删文件：这一轮的文档留到下一次对话，下一次 init 时覆盖清掉。
+console.log('关卡文件保留：' + file)
 process.exit(allPass ? 0 : 1)

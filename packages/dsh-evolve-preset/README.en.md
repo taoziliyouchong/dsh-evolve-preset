@@ -8,7 +8,7 @@ The same model plays differently depending on how it takes work. Evolution mode 
 
 | Stage | What happens |
 | --- | --- |
-| ① Before acting | Decode the request, look for existing sources, reduce it to object + target state, plan, analyze requirements (hard requirements must be derived backwards), publish the alignment bar, hand off to the task tree |
+| ① Before acting | Decode the request, look for existing sources, reduce it to object + target state, plan, analyze requirements (hard requirements must be derived backwards), open the gate document, publish the alignment bar, hand off to the task tree |
 | ② While working | Check principles and requirements before each step; keep the todo list in sync; record repeated work and turn it into a plugin when possible |
 | ③ Before replying | Three-block structure; conclusion first; two versions of deliverables (human / AI); run machine checks |
 | ④ Closing | Five-item check (profile, induction, alignment, pending, vocabulary) plus file landing; "summarize" only reconciles |
@@ -41,7 +41,7 @@ The dictionary is a package dependency and installs with this package; the rest 
 | `dsh-profile-inject` | Injects the user profile at session start | yes |
 | `dsh-profile-panel` | Profile and settings panel | no |
 | `dsh-chat-density` | Smaller, dimmer alignment bar and closing check | no |
-| `dsh-check` | Profile formatting lint, clean-copy scan | no |
+| `dsh-check` | Profile formatting lint, gate cross-check, clean-copy scan | no |
 | `dsh-plan-enter` | Lets the model switch the session into plan mode itself (no longer referenced; install it separately) | no |
 
 Optional companions (separate repositories): `dsh-at-menu`, `dsh-prompt-shelf`, `dsh-reload-buttons`, `dsh-session-autarchive`.

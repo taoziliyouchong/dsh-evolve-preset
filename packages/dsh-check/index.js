@@ -116,12 +116,11 @@ export function apply(ctx) {
 
   ctx.tools.register(defineTool({
     name: 'gate-check',
-    description: '关卡勾稽校验：把「关卡」从自报数字变成可核条目。模板每节一项，要求正文非空白字符 ≥10 且有一行 EVID: 指针（文件:行 必须真实存在 / tool:名字{...} / cmd:... / SKIP:理由），SKIP 超过 8 节判整轮未做。不论过没过，跑完即删模板（只留一行日志），下一轮要改重新 init 填——防旧证据复用。init=true 生成空白模板到 $DSH_HOME/gate/<id>.md；回帖前跑一次，红了就是没过。',
+    description: '关卡勾稽校验：把关卡从自报数字变成可核条目。动手前 init=true 生成模板（$DSH_HOME/gate/<id>.md，节名照模板 ## 01 原件 … ## 07 升级与归纳，共 7 节）；前五节动手前填，落盘、升级与归纳先写「回帖前补」，回帖前补完再校验。每节：结论 ≥10 个非空白字符 + 一行 EVID: 指针（文件:行 必须真实存在 / tool:名字{...} / cmd:... / SKIP:理由）；SKIP 超过 2 节判整轮未做；还留着占位的节直接判不过。校验不删文件，下一次 init 覆盖清掉。输出「关卡：7/7 ✅」或「关卡：5/7（③⑥未过）」，照抄进对齐栏。',
     parameters: {
       file: { type: 'string', description: '模板路径；缺省用 $DSH_HOME/gate/<sessionId>.md' },
-      init: { type: 'boolean', description: 'true = 生成空白模板（已存在则不覆盖）' },
+      init: { type: 'boolean', description: 'true = 生成/重置模板（每次 init 覆盖旧文件）' },
       clean: { type: 'boolean', description: 'true = 删掉本会话的模板与日志（会话结束用）' },
-      keep: { type: 'boolean', description: 'true = 跑完不删模板（排障用；默认不论过没过都删）' },
       session: { type: 'string', description: '会话 id（init 或缺省 file 时用）' },
     },
     output: {
@@ -140,7 +139,6 @@ export function apply(ctx) {
         : join(process.env.DSH_HOME || join(homedir(), '.dsh'), 'gate', sid + '.md')
       if (!existsSync(file)) throw new Error('模板不存在：' + file + '（先 init=true 生成）')
       const argv = ['--file', file, '--session', sid]
-      if (args.keep !== true) argv.push('--finalize')
       return await runScript(ctx, GATE_CHECK, argv, exec)
     },
   }))

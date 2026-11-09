@@ -50,6 +50,6 @@ npm publish --access public --workspace packages/dsh-check
 
 ## 已知注意
 
-- `package.json` 的 description 写「两条自查工具」，实现与 README 是三条（含 `gate-check`）。发版前把 description 改成三条，别让市场页与 README 对不上。
-- `gate-check` 的模板在 `$DSH_HOME/gate/<会话id>.md`；默认跑完即删模板、只留日志，防止下一轮复用旧证据。
+- `package.json` 的 description 与 README 都按三条工具写（`net-clean-check` / `profile-lint` / `gate-check`），发版前对一眼。
+- `gate-check` 的模板在 `$DSH_HOME/gate/<会话id>.md`，7 节（01 原件 … 07 升级与归纳）；校验不删文件，下一次 `init` 覆盖清掉。
 - `profile-lint` 读 `$DSH_HOME` 下的画像文件；画像用纯文本框编辑、不渲染 markdown，加粗与缩进按字面噪音报。
