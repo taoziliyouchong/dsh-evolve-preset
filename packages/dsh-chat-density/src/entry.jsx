@@ -20,9 +20,12 @@
 
 const ATTR = 'data-zz'
 const MARK = 'quiet'
+/* 40 秒草稿单独一类：正文里的正式对齐栏一出现，它整块收起来，只留正式那份。 */
+const LATE_MARK = 'late-bar'
+const REPLACED = 'data-zz-replaced'
 const STYLE_ID = 'dsh-chat-density-style'
 const GLOBAL_KEY = '__dshChatDensity'
-const VERSION = '6'
+const VERSION = '7'
 
 const ALIGN_PREFIXES = ['根本目标：', '本层目标：', '我按哪个目标改：', '服务上层：']
 /* 旧写法曾以层号起头（第一层）做完你能……：现在对齐栏不写层号，正则留着兜旧回帖。 */
@@ -42,6 +45,17 @@ blockquote[${ATTR}="${MARK}"] {
 blockquote[${ATTR}="${MARK}"] p { margin: 0 !important; }
 blockquote[${ATTR}="${MARK}"] li { margin: 0 !important; }
 blockquote[${ATTR}="${MARK}"] code { font-size: 0.94em !important; }
+blockquote[${ATTR}="${LATE_MARK}"] {
+  font-size: 12.5px !important;
+  line-height: 1.32 !important;
+  color: var(--dsw-alias-label-secondary) !important;
+  padding: 3px 0 3px 8px !important;
+  margin: 22px 0 !important;
+  border-left-width: 2px !important;
+  border-left-style: dashed !important;
+}
+blockquote[${ATTR}="${LATE_MARK}"] p { margin: 0 !important; }
+blockquote[${ATTR}="${LATE_MARK}"][${REPLACED}="1"] { display: none !important; }
 `
 
 /** 样式版本变了就换掉旧 style 元素（重载后不必刷新整页也能拿到新样式）。 */
@@ -64,13 +78,39 @@ function isQuietBlock(text) {
   return TAIL_KEYS.some((key) => text.includes(key))
 }
 
+/** 40 秒那版草稿：任务树在长思考时插进来的过渡块，开头是沙漏。 */
+function isLateBlock(text) {
+  const head = text.trimStart()
+  return head.startsWith('⏳') && head.includes('对齐栏草稿')
+}
+
+/** 正式对齐栏的收尾标记：草稿不带关卡行，正式版带。 */
+function hasGateLine(text) {
+  return /关卡[：:]/.test(text)
+}
+
 /** 只补标、不摘标（见文件头说明）。已经标过的直接跳过。 */
 function scan() {
   for (const el of document.querySelectorAll('blockquote')) {
-    if (el.getAttribute(ATTR) === MARK) continue
     if (el.closest('pre, code')) continue
-    const text = (el.textContent ?? '').slice(0, 600)
+    const text = (el.textContent ?? '').slice(0, 800)
+    if (isLateBlock(text)) {
+      if (el.getAttribute(ATTR) !== LATE_MARK) el.setAttribute(ATTR, LATE_MARK)
+      continue
+    }
+    if (el.getAttribute(ATTR) === MARK) continue
     if (isQuietBlock(text)) el.setAttribute(ATTR, MARK)
+  }
+  // 草稿被正式对齐栏顶掉：同一容器里出现带关卡行的正式栏，就把草稿整块收起。
+  for (const el of document.querySelectorAll(`blockquote[${ATTR}="${LATE_MARK}"]`)) {
+    let p = el.parentElement
+    let replaced = false
+    for (let depth = 0; p && depth < 10; depth++, p = p.parentElement) {
+      const reals = Array.from(p.querySelectorAll(`blockquote[${ATTR}="${MARK}"]`))
+      if (reals.some((b) => hasGateLine(b.textContent ?? ''))) { replaced = true; break }
+    }
+    if (replaced) el.setAttribute(REPLACED, '1')
+    else el.removeAttribute(REPLACED)
   }
 }
 

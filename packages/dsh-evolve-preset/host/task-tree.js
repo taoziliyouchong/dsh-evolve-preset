@@ -1,4 +1,4 @@
-﻿/**
+/**
  * dsh-evolve-task-tree —— 会话任务树（个人插件）
  *
  * 定义（与用户的任务树想法对齐）：
@@ -886,8 +886,11 @@ function renderAlignBlock(rec, target, align) {
   const pad = '　'.repeat(4)
   const list = (label, raw) => {
     const src = Array.isArray(raw) ? raw.join('｜') : String(raw || '')
-    const items = src.split('｜').map((x) => x.trim()).filter(Boolean)
-    if (items.length === 0) {
+    const items = src
+      .split('｜')
+      .map((x) => x.trim().replace(/^[①②③④⑤⑥⑦⑧⑨⑩]\s*/, ''))
+      .filter(Boolean)
+    if (items.length === 0 || (items.length === 1 && items[0] === '无')) {
       lines.push(`**${label}**：无`)
       return
     }
@@ -937,8 +940,14 @@ function draftAlignText(sessionId) {
   const align = alignOf(rec)
   if (!align || !String(align.goal || '').trim()) return ''
   const block = renderAlignBlock(rec, null, align)
-  const quoted = block.split('\n').filter((l) => l.trim() !== '').map((l) => `> ${l}\\`).join('\n')
-  return `> ⏳ 思考超过 40 秒 · 先把这一版对齐栏交给你（正文随后）\\\n${quoted}\n\n`
+  // 与正式回复的对齐栏同款：引用块 + 行末反斜杠。
+  // 纯文本单换行会被 Markdown 当软换行拼成一行（实测），必须靠引用块与硬换行保住分行。
+  const quoted = block
+    .split('\n')
+    .filter((l) => l.trim() !== '')
+    .map((l) => `> ${l}\\`)
+    .join('\n')
+  return `> ⏳ 思考超过 40 秒 · 当前对齐栏草稿（正文随后）\\\n${quoted}\n\n`
 }
 
 /** 一轮开始时挂上（同一轮只挂一次）；没有树/对齐栏就不挂。 */
@@ -967,6 +976,7 @@ async function* lateBarStream(source, text, dueIn, onInject) {
   let pending = null
   let injected = false
   let sawText = false
+  let sawTool = false
   const emitDraft = function* () {
     if (typeof onInject === 'function') onInject()
     yield { type: 'block-start', index: LATE_BAR_INDEX, blockType: 'text' }
@@ -985,7 +995,7 @@ async function* lateBarStream(source, text, dueIn, onInject) {
       if (timerDone) outcome = await pending.then((v) => ({ v }))
       else outcome = await Promise.race([pending.then((v) => ({ v })), timerWait.then(() => ({ timeout: true }))])
       if (outcome.timeout) {
-        if (timerDone && !injected && !sawText) {
+        if (timerDone && !injected && !sawText && !sawTool) {
           injected = true
           yield* emitDraft()
         }
@@ -995,6 +1005,9 @@ async function* lateBarStream(source, text, dueIn, onInject) {
       pending = null
       if (done) return
       if (value && value.type === 'text-delta' && typeof value.text === 'string' && value.text.trim() !== '') sawText = true
+      // 已经出过工具调用就不能再插：注入块会落在 tool_use 之后或两次调用之间，
+      // 服务端要求 tool_use 后面紧跟 tool_result，整条请求会被判 INVALID_REQUEST。
+      if (value && value.type === 'block-start' && value.blockType === 'tool-call') sawTool = true
       yield value
     }
   } finally {
@@ -1022,6 +1035,22 @@ function installLateBar(ctx) {
     })
   } catch {
     /* 挂不上：功能不生效，不影响树的其余部分 */
+  }
+  // 一轮只挂一次：pre-step 每个 step 都会触发，按步挂会让同一轮注入多次。
+  // 改成轮边界：turn/start 挂、turn/end 清。
+  try {
+    ctx.on('session/event', (session, event) => {
+      const sid = session && session.id ? String(session.id) : ''
+      if (!sid || !event || typeof event.type !== 'string') return
+      if (event.type === 'turn/start') {
+        const turn = event.data && event.data.turn
+        armLateBar(sid, turn)
+      } else if (event.type === 'turn/end') {
+        lateBarArms.delete(sid)
+      }
+    })
+  } catch {
+    /* 没有会话事件：退回每步检查（llm/stream 里仍会判 fired） */
   }
 }
 
@@ -1931,8 +1960,7 @@ export function apply(ctx) {
     ctx.on('agent/pre-step', ({ agent, turn }, next) => {
       try {
         const presetNow = gateAgent(agent, false)
-        // 长思考 40 秒先交一版对齐栏：每一轮开头挂一次（只有进化模式会话有对齐栏可交）。
-        if (presetNow === ALIGN_PRESET && agent && agent.session) armLateBar(agent.session.id, turn)
+        // 40 秒草稿的挂载改到 turn/start（见 installLateBar）；这里只做模式门。
       } catch { /* 判不出就维持现状 */ }
       return next()
     })
