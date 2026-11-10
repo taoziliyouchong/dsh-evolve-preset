@@ -22,7 +22,7 @@ npm pack --dry-run --workspace packages/dsh-plan-enter
 ## 2. 安装位置
 
 - 由 preset 挂载：写进 preset 的 `planning` 组（`name: dsh-plan-enter`），**不要**再写进 profile 的 `dsh.profile.bundles`，否则挂两次。
-- 单独使用（不经 preset）：`dsh plugin --profile desktop add dsh-plan-enter`，作为独立插件挂载。
+- 单独使用（不经 preset）：本包未发 npm，从仓库装后手动加进 profile 的 bundles，作为独立插件挂载。
 
 ## 3. 填占位符
 

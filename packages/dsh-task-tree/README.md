@@ -1,6 +1,7 @@
-# dsh-task-tree
+﻿# dsh-evolve-task-tree
+> **已并入 [`dsh-evolve-preset` 0.2.0](../dsh-evolve-preset/README.md)**：本包不再单独发布——能力已收进那个包的 `host/` 与 `lib/client.js`，装那一个包就是全套。
 
-**中文** | [English](README.en.md)
+**注意**：本包的 npm 名是 `dsh-evolve-task-tree`。npm 上那个 `dsh-task-tree` 是另一位作者（viyiviyi）的插件，别按那个名字装。
 
 会话任务树：把一件活摆成能看懂、也能打断纠正的方向图——一眼看清现在做到哪、这活替谁做、旁边还有哪几件。
 
@@ -56,8 +57,18 @@
 
 ## 安装
 
+从 npm 装：
+
 ```sh
-dsh plugin --profile desktop add dsh-task-tree
+dsh plugin --profile desktop add dsh-evolve-task-tree
+```
+
+从本仓库装（连带其余配套一起接）：
+
+```sh
+git clone https://github.com/taoziliyouchong/dsh-evolve-preset
+cd dsh-evolve
+node scripts/install.mjs --profile desktop
 ```
 
 装完重启 DSH。要求 DSH >= 0.2.1-alpha.1。面板是浏览器半边，`lib/client.js` 已随包提交，不需要构建。

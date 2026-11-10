@@ -35,12 +35,16 @@ if (pkg) {
   else bad('engines.dsh 缺失');
   if (pkg.dependencies?.['dsh-term-dict']) ok('依赖声明 dsh-term-dict');
   else bad('缺 dsh-term-dict 依赖');
-  const companions = ['dsh-task-tree', 'dsh-profile-inject'];
-  const readme = read('README.md');
-  for (const name of companions) {
-    if (!readme.includes(name)) bad(`README 未写可选插件：缺 ${name}`);
+  if (pkg.main === 'index.js') ok('main = index.js');
+  else bad(`main 应为 index.js，实际 ${pkg.main}`);
+  if (pkg.exports?.['./client'] === './lib/client.js') ok('exports 声明客户端入口');
+  else bad('exports["./client"] 缺失');
+  if (pkg.dsh?.client?.platform === 'web') ok('dsh.client 已声明');
+  else bad('dsh.client 缺失');
+  for (const f of ['index.js', 'host', 'lib/client.js', 'assets']) {
+    if (!pkg.files?.includes(f)) bad(`files 缺 ${f}`);
   }
-  if (companions.every((n) => readme.includes(n))) ok('README 写全 2 个可选插件');
+  if (['index.js', 'host', 'lib/client.js', 'assets'].every((f) => pkg.files?.includes(f))) ok('files 含宿主、客户端与 assets');
 }
 
 // 2. preset 声明与组合行
@@ -59,9 +63,26 @@ for (const [label, needle] of must) {
   if (yml.includes(needle)) ok(label);
   else bad(`组合文件缺：${label}（${needle}）`);
 }
+for (const needle of ['- id: evolve-core', 'name: dsh-evolve-preset']) {
+  if (yml.includes(needle)) ok(`组合行挂本包：${needle}`);
+  else bad(`组合文件缺本包宿主行：${needle}`);
+}
 for (const name of ['dsh-plan-enter', 'dsh-task-tree', 'dsh-term-dict', 'dsh-profile-inject']) {
   if (yml.includes(`name: ${name}`)) bad(`组合文件不应引用外部插件 ${name}`);
   else ok(`组合行不含 ${name}`);
+}
+
+// 2.5 合包结构：host 模块与客户端外壳
+for (const f of ['task-tree', 'profile-inject', 'profile-panel', 'chat-density', 'check', 'plan-enter']) {
+  if (existsSync(join(root, 'host', `${f}.js`))) ok(`host/${f}.js 存在`);
+  else bad(`缺 host/${f}.js`);
+}
+const client = read('lib/client.js');
+if (client.includes('window.__ModuleLoader__.load(') && client.includes('id: "dsh-evolve-preset"')) ok('客户端外壳 id = 本包名');
+else bad('客户端外壳 id 不是本包名');
+for (const f of ['net-clean-check.mjs', 'profile-lint.mjs', 'gate-check.mjs']) {
+  if (existsSync(join(root, 'assets', f))) ok(`assets/${f} 存在`);
+  else bad(`缺 assets/${f}`);
 }
 
 // 3. 残留扫描（词表拆开写，避免本文件自己命中）

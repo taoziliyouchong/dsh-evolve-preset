@@ -1,22 +1,41 @@
 {
   "name": "dsh-evolve-preset",
-  "version": "0.1.1",
-  "description": "让模型更准确地理解你的需求、能够用相同的花费实现明显更好的效果（即使只有一句话）、长期积累你的偏好的思维模式；由模式正文与配套插件配合实现，内容只在进化模式生效。",
+  "version": "0.2.0",
+  "description": "进化模式整套：一个包装下模式本体与全部配套——任务树、画像注入与面板、对齐栏样式、自查工具、计划模式入口。每轮先对齐需求、按规则干活、三块回复收尾。",
   "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
   "files": [
+    "index.js",
+    "host",
+    "lib/client.js",
+    "src",
     "cordis.patch.yml",
     "skills",
+    "assets",
     "README.md",
     "README.en.md",
     "LICENSE"
   ],
   "dsh": {
+    "client": {
+      "platform": "web",
+      "inject": []
+    },
     "bundle": {
       "patch": "./cordis.patch.yml"
     }
   },
   "dependencies": {
     "dsh-term-dict": "*"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-tools": ">=0.2.1-alpha.1",
+    "@deepseek-ai/dsh-llm": ">=0.2.1-alpha.1"
   },
   "engines": {
     "node": "^22.19.0 || >=24.0.0",
@@ -29,11 +48,14 @@
     "agent-preset",
     "mode",
     "persona",
-    "workflow"
+    "workflow",
+    "task-tree",
+    "profile"
   ],
   "author": "taoziliyouchong",
   "license": "MIT",
   "scripts": {
+    "check": "node --check index.js",
     "smoke": "node scripts/smoke.mjs"
   },
   "repository": {

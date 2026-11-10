@@ -32,7 +32,7 @@ if (!existsSync(join(profileDir, 'package.json'))) {
 // 默认只装「进化模式本体」这 8 个；--all 装全部（工具与领域包按需可后装）。
 const CORE = new Set([
   'dsh-evolve-preset',
-  'dsh-task-tree',
+  'dsh-evolve-task-tree',
   'dsh-term-dict',
   'dsh-profile-inject',
   'dsh-profile-panel',

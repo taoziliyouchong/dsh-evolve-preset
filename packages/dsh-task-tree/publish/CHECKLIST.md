@@ -1,4 +1,4 @@
-# 发布清单（dsh-task-tree）
+﻿# 发布清单（dsh-evolve-task-tree）
 
 本目录是 `dsh-evolve-preset` 仓库里的 `packages/dsh-task-tree`。本包提供会话任务树：侧栏面板、`task-tree` 工具、每轮对齐栏注入，是进化模式的必需依赖。
 
@@ -26,7 +26,7 @@ npm pack --dry-run --workspace packages/dsh-task-tree
 本包要写进 profile 的 `dsh.profile.bundles`（客户端半边要进 boot 清单）：
 
 ```json
-"dsh": { "profile": { "bundles": ["dsh-task-tree"] } }
+"dsh": { "profile": { "bundles": ["dsh-evolve-task-tree"] } }
 ```
 
 仓库里的 `scripts/install.mjs` 会自动写；手动装时别漏。

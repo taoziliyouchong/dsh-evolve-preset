@@ -5,9 +5,12 @@
 #
 # 本体插件（dsh-task-tree / dsh-term-dict / dsh-profile-inject / dsh-profile-panel /
 # dsh-chat-density / dsh-check）要在安装后写进 profile 的 bundles——它们的客户端半边
-# 需要进 boot 清单，注入与工具按会话的 agentPreset 自己收口。本包的 dependencies 声明
-# 这些包，安装时一起装上；`node scripts/install.mjs` 会自动把它们写进 bundles。
+# 需要进 boot 清单，注入与工具按会话的 agentPreset 自己收口。npm 上只有本包与字典；
+# 其余包不在 npm，用 `node scripts/install.mjs` 从仓库接线。
 - insert:
+    # 本包自己的宿主半边：任务树工具与路由、画像注入、画像面板路由、自查工具、计划模式入口。
+    - id: evolve-core
+      name: dsh-evolve-preset
     - id: preset-evolve
       name: '@deepseek-ai/dsh-agent-preset'
       config:
@@ -445,7 +448,7 @@
 
           # ── 进化模式本体插件 ───────────────────────────────────────────────────────
           #
-          # 只有计划模式入口挂在 preset 里：它需要 planning 组的 planMode 隔离实例。
-          # 其余本体插件（task-tree / term-dict / profile-inject / profile-panel /
-          # chat-density / check）挂 profile 的 bundles——它们的客户端半边要进 boot 清单，
-          # 注入与工具按会话的 agentPreset 自己收口（见各自 README）。
+          # 本体能力已并入本包（host/ 下按模块挂载），由上面的 evolve-core 行加载，
+          # 不再需要单独的插件包。planning 组里的 plan-mode 仍由官方
+          # @deepseek-ai/dsh-plan-mode 提供；enter_plan_mode 工具由本包的 plan-enter 模块
+          # 在检测到 planMode 服务时注册。

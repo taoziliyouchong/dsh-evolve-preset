@@ -1,7 +1,7 @@
-const PACKAGE_NAME = 'dsh-task-tree'
+const PACKAGE_NAME = 'dsh-evolve-task-tree'
 
 /** Cordis companion plugin name. */
-export const name = 'dsh-task-tree-invariant'
+export const name = 'dsh-evolve-task-tree-invariant'
 /** Service required before the companion can reserve package ownership. */
 export const inject = ['invariants']
 

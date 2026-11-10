@@ -1,4 +1,5 @@
-# dsh-check
+﻿# dsh-check
+> **已并入 [`dsh-evolve-preset` 0.2.0](../dsh-evolve-preset/README.md)**：本包不再单独发布——能力已收进那个包的 `host/` 与 `lib/client.js`，装那一个包就是全套。
 
 三条自查工具，给「交付前过机器校验」用：
 
@@ -43,8 +44,12 @@
 
 ## 安装
 
+本包没有发布到 npm，`dsh plugin add dsh-check` 装不到。从本仓库装（整组装）：
+
 ```sh
-dsh plugin --profile desktop add dsh-check
+git clone https://github.com/taoziliyouchong/dsh-evolve-preset
+cd dsh-evolve
+node scripts/install.mjs --profile desktop
 ```
 
 装完重启 DSH。要求 DSH >= 0.2.1-alpha.1。

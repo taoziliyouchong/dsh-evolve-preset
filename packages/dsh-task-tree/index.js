@@ -1,5 +1,5 @@
-/**
- * dsh-task-tree —— 会话任务树（个人插件）
+﻿/**
+ * dsh-evolve-task-tree —— 会话任务树（个人插件）
  *
  * 定义（与用户的任务树想法对齐）：
  *   任务树＝把一个任务摆成**能看懂、也能打断纠正**的方向图：
@@ -29,7 +29,7 @@ import { join } from 'node:path'
 import { zstdDecompressSync } from 'node:zlib'
 
 /** Cordis 插件名。 */
-export const name = 'dsh-task-tree'
+export const name = 'dsh-evolve-task-tree'
 /** 需要的服务。2026-11-03：技能 provider 挪进了 preset 层（skill-filesystem 扫 assets/），不再用 skills。 */
 export const inject = ['tools', 'commands']
 
@@ -1527,7 +1527,7 @@ function unplacedLine(rec) {
 
 /* ───────────────────────── 宿主数据口（浏览器半边只读它） ───────────────────────── */
 
-const API_PREFIX = '/dsh-task-tree/api'
+const API_PREFIX = '/dsh-evolve-task-tree/api'
 
 /** 是否本机请求。 */
 function isLocal(req) {
@@ -1606,7 +1606,7 @@ function registerRoutes(ctx) {
           sendJson(res, 500, { ok: false, error: String((error && error.message) || error) })
         }
       },
-    }), 'dsh-task-tree: tree route')
+    }), 'dsh-evolve-task-tree: tree route')
 
     hostCtx.effect(() => webServer.register({
       kind: 'exact',
@@ -1637,7 +1637,7 @@ function registerRoutes(ctx) {
           sendJson(res, 400, { ok: false, error: String((error && error.message) || error) })
         }
       },
-    }), 'dsh-task-tree: align route')
+    }), 'dsh-evolve-task-tree: align route')
 
     hostCtx.effect(() => webServer.register({
       kind: 'exact',
@@ -1670,7 +1670,7 @@ function registerRoutes(ctx) {
           sendJson(res, 400, { ok: false, error: String((error && error.message) || error) })
         }
       },
-    }), 'dsh-task-tree: node route')
+    }), 'dsh-evolve-task-tree: node route')
   }
 
   const direct = typeof ctx.get === 'function' ? ctx.get('webServer') : undefined

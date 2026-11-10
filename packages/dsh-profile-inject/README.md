@@ -1,4 +1,5 @@
-# dsh-profile-inject
+﻿# dsh-profile-inject
+> **已并入 [`dsh-evolve-preset` 0.2.0](../dsh-evolve-preset/README.md)**：本包不再单独发布——能力已收进那个包的 `host/` 与 `lib/client.js`，装那一个包就是全套。
 
 开场把用户画像注入上下文：`$DSH_HOME/evolve/user-profile.md` 的正文，加上任务画像类别清单；按设置做模式过滤、截断、会话静音与工作空间绑定。
 
@@ -34,13 +35,17 @@
 
 ## 安装
 
+本包没有发布到 npm，`dsh plugin add dsh-profile-inject` 装不到。从本仓库装（整组装）：
+
 ```sh
-dsh plugin --profile desktop add dsh-profile-inject
+git clone https://github.com/taoziliyouchong/dsh-evolve-preset
+cd dsh-evolve
+node scripts/install.mjs --profile desktop
 ```
 
 装完重启 DSH。要求 DSH >= 0.2.1-alpha.1。
 
-画像文件不在就什么都不注；要开面板编辑画像，装 `dsh-profile-panel`。
+画像文件不在就什么都不注；要开面板编辑画像，装同仓库的 `dsh-profile-panel`。
 
 ## 许可
 

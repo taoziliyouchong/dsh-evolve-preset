@@ -15,7 +15,7 @@
  *
  * 交互：图上滚轮＝缩放；按住拖动＝平移（左右上下都行）；Shift+滚轮＝横向滚动；点节点＝展开详情。
  *
- * 数据只有一条来源：宿主 dsh-task-tree 的只读路由 `GET /dsh-task-tree/api/tree?sessionId=…`，
+ * 数据只有一条来源：宿主 dsh-evolve-task-tree 的只读路由 `GET /dsh-evolve-task-tree/api/tree?sessionId=…`，
  * 判读口径（运行中=当前树进行中链的末端，由宿主下发的 runningId 定；其余没做完的算排队中）
  * 与工具/命令同一套，面板不另造一份。
  *
@@ -36,15 +36,15 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 /** 宿主路由前缀。 */
-const ROUTE = 'dsh-task-tree/api'
+const ROUTE = 'dsh-evolve-task-tree/api'
 /** 本实现在标签系统里的身份，也是 body / title 座位的 key 之一。 */
-const TAB_ID = 'dsh-task-tree/task-tree'
+const TAB_ID = 'dsh-evolve-task-tree/task-tree'
 /** 本包占用的 tab kind，openTab 认它，也是内容座位的兜底 key。 */
 const TAB_KIND = 'dshTaskTree'
 /** 卡片在选择列里的位置：紧贴「文件」之后。 */
 const GUIDE_ORDER = 11
 /** 样式只注入一次。 */
-const STYLE_ID = 'dsh-task-tree-style'
+const STYLE_ID = 'dsh-evolve-task-tree-style'
 
 /** 基本点的序号（与回帖对齐栏同一套）。 */
 const MARKS = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩']

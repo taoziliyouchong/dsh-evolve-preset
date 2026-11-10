@@ -1,5 +1,5 @@
-window.__ModuleLoader__.load({
-	id: "dsh-task-tree",
+﻿window.__ModuleLoader__.load({
+	id: "dsh-evolve-task-tree",
 	factory: (require) => {
 		var module = { exports: {} };
 		var exports = module.exports;
@@ -33,11 +33,11 @@ __export(entry_exports, {
 module.exports = __toCommonJS(entry_exports);
 var import_react = require("react");
 var import_jsx_runtime = require("react/jsx-runtime");
-var ROUTE = "dsh-task-tree/api";
-var TAB_ID = "dsh-task-tree/task-tree";
+var ROUTE = "dsh-evolve-task-tree/api";
+var TAB_ID = "dsh-evolve-task-tree/task-tree";
 var TAB_KIND = "dshTaskTree";
 var GUIDE_ORDER = 11;
-var STYLE_ID = "dsh-task-tree-style";
+var STYLE_ID = "dsh-evolve-task-tree-style";
 var MARKS = ["\u2460", "\u2461", "\u2462", "\u2463", "\u2464", "\u2465", "\u2466", "\u2467", "\u2468", "\u2469"];
 var NODE_W = 240;
 var FOCUS_W = NODE_W;

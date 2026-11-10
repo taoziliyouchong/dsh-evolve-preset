@@ -1,4 +1,5 @@
-# dsh-plan-enter
+﻿# dsh-plan-enter
+> **已并入 [`dsh-evolve-preset` 0.2.0](../dsh-evolve-preset/README.md)**：本包不再单独发布——能力已收进那个包的 `host/` 与 `lib/client.js`，装那一个包就是全套。
 
 给模型一个 `enter_plan_mode` 工具：自己把当前会话切进计划模式——之后只读、只搜、只设计，最后用 `exit_plan_mode` 把完整计划交给你批。
 
@@ -14,13 +15,15 @@ DSH 默认只给 `exit_plan_mode`，计划模式要人手动切。长任务、�
 
 ## 安装
 
-本包是 `dsh-evolve-preset` 的依赖，通常随它一起装：
+本包没有发布到 npm，`dsh plugin add dsh-plan-enter` 装不到；preset 也不引用它，装了才生效。从本仓库装（整组装）：
 
 ```sh
-dsh plugin --profile desktop add dsh-evolve-preset
+git clone https://github.com/taoziliyouchong/dsh-evolve-preset
+cd dsh-evolve
+node scripts/install.mjs --profile desktop
 ```
 
-单独装（不经 preset）时它会作为独立插件挂载；但进化模式里它挂在 preset 的 `planning` 组内（需要那组的 `planMode` 隔离实例），**不要再把本包加进同一个 profile 的 bundles**，否则挂两次。
+`install.mjs` 只把它写进 profile 的 `dependencies`，不写进 `dsh.profile.bundles`。要真的用起来，手动把 `dsh-plan-enter` 加进 profile 的 `bundles`。
 
 装完重启 DSH。要求 DSH >= 0.2.1-alpha.1。
 

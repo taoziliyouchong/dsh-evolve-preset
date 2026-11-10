@@ -1,4 +1,5 @@
-# dsh-profile-panel
+﻿# dsh-profile-panel
+> **已并入 [`dsh-evolve-preset` 0.2.0](../dsh-evolve-preset/README.md)**：本包不再单独发布——能力已收进那个包的 `host/` 与 `lib/client.js`，装那一个包就是全套。
 
 用户画像面板：在设置里读写 `$DSH_HOME/evolve/user-profile.md` 与 `user-profile.d/*.md`，管注入设置，看原文。
 
@@ -29,8 +30,12 @@
 
 ## 安装
 
+本包没有发布到 npm，`dsh plugin add dsh-profile-panel` 装不到。从本仓库装（整组装）：
+
 ```sh
-dsh plugin --profile desktop add dsh-profile-panel
+git clone https://github.com/taoziliyouchong/dsh-evolve-preset
+cd dsh-evolve
+node scripts/install.mjs --profile desktop
 ```
 
 装完重启 DSH。要求 DSH >= 0.2.1-alpha.1。面板是浏览器半边，`lib/client.js` 已随包提交，不需要构建。
