@@ -44,7 +44,7 @@ dsh plugin --profile desktop add dsh-evolve-preset
 ## 4. 社区目录条目
 
 - `publish/registry-entry.yml` 是本包条目，描述已按合包改写。
-- 不再为六个旧分包各提条目；已合并的条目若指向 `packages/dsh-task-tree` 这类子包路径，仍能解析（目录保留），无需撤回。
+- 不再为六个旧分包各提条目；已合并的条目若指向 `packages/dsh-evolve-task-tree` 这类子包路径，仍能解析（目录保留），无需撤回。
 
 ## 已知注意
 

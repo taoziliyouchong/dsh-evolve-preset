@@ -43,7 +43,7 @@ function arg(name, def) {
 
 function template(sessionId) {
   const head = `# 关卡勾稽 · ${sessionId}\n\n> 节名照下：## 01 原件 … ## 07 升级与归纳。每节：正文 ≥ ${MIN_CHARS} 个非空白字符 + 一行 EVID: 指针（文件:行 / tool:名字{参数} / cmd:命令 / SKIP:理由）。\n> 前五节动手前写完，落盘、升级与归纳先写「${PLACEHOLDER}」，回帖前补成实据再校验。校验不删文件，下一次 init 覆盖。\n\n`
-  const body = SECTIONS.map(([no, title]) => `## ${no} ${title}\nEVID:\n结论：\n`).join('\n')
+  const body = SECTIONS.map(([no, title]) => `## ${no} ${title}\n` + 'EVID:' + '\n结论：\n').join('\n')
   return head + body
 }
 

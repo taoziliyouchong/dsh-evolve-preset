@@ -1,8 +1,9 @@
 ﻿window.__ModuleLoader__.load({
 	id: "dsh-evolve-preset",
 	factory: (require) => {
+		const __panels = [];
 // 任务树面板
-(function () {
+__panels.push((function () {
 
 		var module = { exports: {} };
 		var exports = module.exports;
@@ -94,6 +95,11 @@ var CSS = `
 .ztt-statusbtn-on { border-color:var(--dsw-alias-brand-primary); color:var(--dsw-alias-label-primary);
   background:var(--dsw-alias-bg-layer-2); }
 .ztt-cardactions { display:flex; justify-content:flex-end; margin-top:10px; }
+/* \u7F16\u8F91\u6001\uFF1A\u5361\u7247\u6CBF\u7528\u8FDB\u5165\u7F16\u8F91\u524D\u91CF\u5230\u7684\u5927\u5C0F\uFF08\u5BBD\u7531\u5E03\u5C40\u7ED9\uFF09\uFF0C\u8868\u5355\u5728\u5361\u5185\u6EDA\u52A8\u2014\u2014\u70B9\u300C\u7F16\u8F91\u300D\u4E0D\u7F29\u8282\u70B9\u3001
+   \u65C1\u8FB9\u7684\u5361\u4E5F\u4E0D\u8DDF\u7740\u56DE\u6392\u3002 */
+.ztt-card-editing { display:flex; flex-direction:column; overflow:hidden; }
+.ztt-card-editing .ztt-detail { flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
+.ztt-card-editing .ztt-editform { flex:1 1 auto; min-height:0; overflow:auto; padding-right:2px; }
 
 /* \u56FE\u6807\u6309\u94AE\uFF1A\u4E0D\u62A2\u620F\uFF0Chover \u624D\u4EAE */
 .ztt-iconbtn { flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
@@ -414,6 +420,25 @@ function runningNodeId(root) {
   if (root) walk(root);
   return found;
 }
+var AutoArea = function AutoArea2({ value, onChange, rows = 1 }) {
+  const ref = (0, import_react.useRef)(null);
+  (0, import_react.useLayoutEffect)(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.max(el.scrollHeight + 2, 56) + "px";
+  }, [value]);
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+    "textarea",
+    {
+      ref,
+      className: "ztt-editarea",
+      rows,
+      value,
+      onChange
+    }
+  );
+};
 var NodeCard = function NodeCard2({ node, x, y, width, focus, on, open, onToggle, setRef, sessionId, onChanged, runningId, derivedFrom }) {
   const goal = String(node.goal || "").trim();
   const points = pointList(node);
@@ -428,7 +453,11 @@ var NodeCard = function NodeCard2({ node, x, y, width, focus, on, open, onToggle
   const [draftStatus, setDraftStatus] = (0, import_react.useState)("active");
   const [saving, setSaving] = (0, import_react.useState)(false);
   const [error, setError] = (0, import_react.useState)(null);
+  const [editBox, setEditBox] = (0, import_react.useState)(0);
+  const cardEl = (0, import_react.useRef)(null);
   const startEdit = () => {
+    const el = cardEl.current;
+    setEditBox(el && el.offsetHeight > 0 ? el.offsetHeight : 0);
     setDraft({
       goal,
       points: points.join("\n"),
@@ -443,6 +472,7 @@ var NodeCard = function NodeCard2({ node, x, y, width, focus, on, open, onToggle
     setEditing(false);
     setDraft(null);
     setError(null);
+    setEditBox(0);
   };
   const setField = (key) => (event) => {
     const value = event && event.target ? event.target.value : "";
@@ -477,6 +507,7 @@ var NodeCard = function NodeCard2({ node, x, y, width, focus, on, open, onToggle
       }
       setEditing(false);
       setDraft(null);
+      setEditBox(0);
       if (typeof onChanged === "function") onChanged();
     } catch (e) {
       setError(String(e && e.message || e));
@@ -487,10 +518,13 @@ var NodeCard = function NodeCard2({ node, x, y, width, focus, on, open, onToggle
   return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
     "div",
     {
-      ref: setRef,
-      className: "ztt-card ztt-card-" + display + (focus ? " ztt-card-focus" : " ztt-card-minor") + (on ? " ztt-card-on" : "") + (open ? " ztt-card-open" : ""),
+      ref: (el) => {
+        cardEl.current = el;
+        if (typeof setRef === "function") setRef(el);
+      },
+      className: "ztt-card ztt-card-" + display + (focus ? " ztt-card-focus" : " ztt-card-minor") + (on ? " ztt-card-on" : "") + (open ? " ztt-card-open" : "") + (editing ? " ztt-card-editing" : ""),
       "data-editing": editing ? "true" : "false",
-      style: { left: x, top: y, width },
+      style: { left: x, top: y, width, height: editing && editBox > 0 ? editBox : void 0 },
       onClick: () => {
         if (!editing) onToggle(node.id);
       },
@@ -523,19 +557,19 @@ var NodeCard = function NodeCard2({ node, x, y, width, focus, on, open, onToggle
           editing ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "ztt-editform", children: [
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { className: "ztt-editfield", children: [
               /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "ztt-editlabel", children: "\u672C\u5C42\u76EE\u6807" }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("textarea", { className: "ztt-editarea", rows: 2, value: draft ? draft.goal : "", onChange: setField("goal") })
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AutoArea, { rows: 2, value: draft ? draft.goal : "", onChange: setField("goal") })
             ] }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { className: "ztt-editfield", children: [
               /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "ztt-editlabel", children: "\u57FA\u672C\u70B9\uFF08\u6BCF\u884C\u4E00\u6761\uFF09" }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("textarea", { className: "ztt-editarea", rows: 3, value: draft ? draft.points : "", onChange: setField("points") })
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AutoArea, { rows: 3, value: draft ? draft.points : "", onChange: setField("points") })
             ] }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { className: "ztt-editfield", children: [
               /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "ztt-editlabel", children: "\u786C\u9700\u6C42\uFF08\u6BCF\u884C\u4E00\u6761\uFF09" }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("textarea", { className: "ztt-editarea", rows: 2, value: draft ? draft.hard : "", onChange: setField("hard") })
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AutoArea, { rows: 2, value: draft ? draft.hard : "", onChange: setField("hard") })
             ] }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { className: "ztt-editfield", children: [
               /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "ztt-editlabel", children: "\u8F6F\u9700\u6C42\uFF08\u6BCF\u884C\u4E00\u6761\uFF09" }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("textarea", { className: "ztt-editarea", rows: 2, value: draft ? draft.soft : "", onChange: setField("soft") })
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AutoArea, { rows: 2, value: draft ? draft.soft : "", onChange: setField("soft") })
             ] }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "ztt-editfield", children: [
               /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "ztt-editlabel", children: "\u72B6\u6001" }),
@@ -822,7 +856,7 @@ function TaskTreeTab(props) {
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { type: "button", className: "ztt-textbtn", onClick: refresh, children: "\u91CD\u8BD5" }) })
     ] });
   }
-  if (state.mode !== "" && state.mode !== "evolve") {
+  if (state.mode !== "" && state.mode !== "plugin-evolution") {
     return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "ztt-root", children: [
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "ztt-note", children: "\u672C\u4F1A\u8BDD\u4E0D\u662F\u8FDB\u5316\u6A21\u5F0F\uFF1A\u4EFB\u52A1\u6811\u4E0E\u5BF9\u9F50\u680F\u53EA\u5728\u8FDB\u5316\u6A21\u5F0F\u91CC\u7528\u3002" }),
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { type: "button", className: "ztt-textbtn", onClick: refresh, children: "\u5237\u65B0" }) })
@@ -1054,9 +1088,11 @@ function apply(ctx) {
     }
   }
 }
-})();
+
+		return module.exports;
+})());
 // 画像面板
-(function () {
+__panels.push((function () {
 
 		var module = { exports: {} };
 		var exports = module.exports;
@@ -2635,9 +2671,11 @@ function apply(ctx) {
     }
   }
 }
-})();
+
+		return module.exports;
+})());
 // 对齐栏与收尾检测的字号密度（含 40 秒草稿的替换）
-(function () {
+__panels.push((function () {
 
 		var module = { exports: {} };
 		var exports = module.exports;
@@ -2660,7 +2698,7 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// src/entry.jsx
+// packages/dsh-chat-density/src/entry.jsx
 var entry_exports = {};
 __export(entry_exports, {
   apply: () => apply,
@@ -2740,13 +2778,150 @@ function scan() {
     let replaced = false;
     for (let depth = 0; p && depth < 10; depth++, p = p.parentElement) {
       const reals = Array.from(p.querySelectorAll(`blockquote[${ATTR}="${MARK}"]`));
-      if (reals.some((b) => hasGateLine(b.textContent ?? ""))) {
+      const later = reals.filter((b) => hasGateLine(b.textContent ?? "") && (el.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0);
+      if (later.length > 0) {
         replaced = true;
         break;
       }
     }
     if (replaced) el.setAttribute(REPLACED, "1");
     else el.removeAttribute(REPLACED);
+  }
+}
+var NOTICE_ID = "dsh-evolve-notice";
+var NOTICE_STYLE_ID = "dsh-evolve-notice-style";
+var NOTICE_CSS = `
+.zz-card {
+  position: fixed; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  overflow: hidden; box-sizing: border-box;
+  width: 600px; max-width: calc(100vw - 40px);
+  padding: 34px 38px 30px; border-radius: 20px;
+  background: var(--dsw-alias-bg-overlay, #1e2026);
+  color: var(--dsw-alias-label-primary, #f4f6fb);
+  border: 1px solid var(--dsw-alias-border-l2, rgba(255,255,255,.14));
+  box-shadow: 0 40px 120px rgba(0,0,0,.55);
+  animation: zz-notice-pop .26s cubic-bezier(.18,.9,.32,1.15);
+}
+.zz-strip {
+  position: absolute; top: 0; left: 0; right: 0; height: 4px;
+  background: linear-gradient(90deg, var(--dsw-alias-brand-primary, #4d6bfe), rgba(139,92,246,.9) 45%, transparent);
+}
+.zz-head { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
+.zz-icon {
+  width: 44px; height: 44px; flex: none; display: flex; align-items: center; justify-content: center;
+  border-radius: 12px; background: rgba(77,107,254,.14);
+  color: var(--dsw-alias-brand-primary, #8ea2ff);
+}
+.zz-title { font-size: 16px; font-weight: 700; letter-spacing: .01em; }
+.zz-sub { margin-top: 3px; font-size: 12.5px; color: var(--dsw-alias-label-secondary, rgba(255,255,255,.6)); }
+.zz-lead { font-size: 17px; line-height: 1.6; font-weight: 500; }
+.zz-name {
+  padding: 1px 7px; border-radius: 6px; font-weight: 700;
+  background: var(--dsw-alias-bg-layer-2, rgba(127,127,127,.18));
+}
+.zz-cmd {
+  margin-left: 2px; padding: 1px 6px; border-radius: 5px;
+  background: rgba(127,127,127,.16); font-size: .86em;
+  color: var(--dsw-alias-label-secondary, rgba(255,255,255,.72));
+}
+.zz-harm {
+  margin-top: 18px; padding: 14px 16px; border-radius: 10px;
+  border-left: 3px solid var(--dsw-alias-state-warn-primary, #f0a020);
+  background: rgba(240,160,32,.10);
+  font-size: 15.5px; line-height: 1.6;
+}
+.zz-harm b { color: var(--dsw-alias-state-warn-primary, #f0a020); font-weight: 700; }
+.zz-actions { display: flex; justify-content: flex-end; margin-top: 26px; }
+.zz-button {
+  min-width: 132px; height: 44px; padding: 0 26px; border: 0; border-radius: 11px;
+  background: var(--dsw-alias-brand-primary, #4d6bfe); color: #fff;
+  font: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+  box-shadow: 0 10px 30px rgba(77,107,254,.35);
+  transition: filter .15s ease, transform .15s ease;
+}
+.zz-button:hover { filter: brightness(1.08); }
+.zz-button:active { transform: translateY(1px); }
+@keyframes zz-notice-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes zz-notice-pop {
+  from { opacity: 0; transform: translate(-50%, -50%) translateY(12px) scale(.96); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
+}
+`;
+function ensureNoticeStyle() {
+  if (document.getElementById(NOTICE_STYLE_ID)) return;
+  const style = document.createElement("style");
+  style.id = NOTICE_STYLE_ID;
+  style.textContent = NOTICE_CSS;
+  document.head.appendChild(style);
+}
+function showCompressNotice() {
+  if (!document.body) return;
+  const old = document.getElementById(NOTICE_ID);
+  if (old) old.remove();
+  ensureNoticeStyle();
+  const host = document.createElement("div");
+  host.id = NOTICE_ID;
+  const setImportant = (name, value) => host.style.setProperty(name, value, "important");
+  setImportant("position", "fixed");
+  setImportant("top", "0");
+  setImportant("left", "0");
+  setImportant("right", "0");
+  setImportant("bottom", "0");
+  setImportant("width", "100%");
+  setImportant("height", "100%");
+  setImportant("box-sizing", "border-box");
+  setImportant("z-index", "2147483000");
+  setImportant("display", "grid");
+  setImportant("place-items", "center");
+  setImportant("margin", "0");
+  setImportant("padding", "32px");
+  setImportant("background", "rgba(8,10,14,.58)");
+  setImportant("backdrop-filter", "blur(6px)");
+  setImportant("-webkit-backdrop-filter", "blur(6px)");
+  host.innerHTML = `
+    <div class="zz-card">
+      <div class="zz-strip"></div>
+      <div class="zz-head">
+        <div class="zz-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 3.2 22 20.4H2L12 3.2Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M12 9.2v4.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <circle cx="12" cy="17.1" r="1.05" fill="currentColor"/>
+          </svg>
+        </div>
+        <div>
+          <div class="zz-title" id="${NOTICE_ID}-title">\u8FDB\u5316\u6A21\u5F0F \xB7 \u4F7F\u7528\u63D0\u793A</div>
+          <div class="zz-sub">\u9996\u6B21\u5B89\u88C5\u6216\u66F4\u65B0\u540E\u63D0\u793A\u4E00\u6B21</div>
+        </div>
+      </div>
+      <div class="zz-lead">\u4E0D\u8981\u4F7F\u7528\u4E0A\u4E0B\u6587\u538B\u7F29\u63D2\u4EF6 <strong class="zz-name">billion-context</strong>\uFF08\u547D\u4EE4\u540D <span class="zz-cmd">bili</span>\uFF09\u3002</div>
+      <div class="zz-harm">\u5B83\u4E0D\u4EC5\u4F1A\u8BA9 <b>token \u6D88\u8017\u66F4\u5927</b>\uFF0C<b>\u6548\u679C\u4E5F\u6CA1\u6709\u90A3\u4E48\u597D</b>\u3002</div>
+      <div class="zz-actions"><button type="button" class="zz-button">\u77E5\u9053\u4E86</button></div>
+    </div>
+  `;
+  document.body.append(host);
+  const close = () => {
+    host.remove();
+    document.removeEventListener("keydown", onKey);
+  };
+  const onKey = (event) => {
+    if (event.key === "Escape") close();
+  };
+  host.querySelector(".zz-button").addEventListener("click", close);
+  document.addEventListener("keydown", onKey);
+  host.querySelector(".zz-button").focus();
+}
+var BILLION_API = "/dsh-evolution-settings/api/billion-context";
+async function maybeShowCompressNotice() {
+  try {
+    const path = new URL(String(BILLION_API).replace(/^\/+/, ""), document.baseURI).pathname;
+    const res = await fetch(path, { headers: { accept: "application/json" } });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data || data.ok === false) return;
+    if (data.installed !== true || data.enabled !== true) return;
+    showCompressNotice();
+  } catch {
   }
 }
 var inject = ["slots"];
@@ -2761,6 +2936,7 @@ function apply() {
   const boot = () => {
     ensureStyle();
     scan();
+    void maybeShowCompressNotice();
     let raf = 0;
     const schedule = () => {
       if (raf) return;
@@ -2793,7 +2969,348 @@ function apply() {
     boot();
   }
 }
-})();
-		return {};
+
+		return module.exports;
+})());
+// 进化模式设置页
+__panels.push((function () {
+
+		var module = { exports: {} };
+		var exports = module.exports;
+		Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+// packages/dsh-evolve-preset/src/settings.jsx
+var settings_exports = {};
+__export(settings_exports, {
+  EvolutionSettingsSection: () => EvolutionSettingsSection,
+  apply: () => apply,
+  inject: () => inject
+});
+module.exports = __toCommonJS(settings_exports);
+var import_react = require("react");
+var import_jsx_runtime = require("react/jsx-runtime");
+var ROUTE_PREFIX = "/dsh-evolution-settings/api";
+function api(path) {
+  const relative = String(path).replace(/^\/+/, "");
+  if (typeof document === "undefined") return "/" + relative;
+  return new URL(relative, document.baseURI).pathname;
+}
+async function getJson(path) {
+  const res = await fetch(api(path), { headers: { accept: "application/json" } });
+  const data = await res.json().catch(() => null);
+  if (!res.ok || !data || data.ok === false) throw new Error(data && data.error || "HTTP " + res.status);
+  return data;
+}
+async function postJson(path, body) {
+  const res = await fetch(api(path), {
+    method: "POST",
+    headers: { "content-type": "application/json", accept: "application/json" },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok || !data || data.ok === false) throw new Error(data && data.error || "HTTP " + res.status);
+  return data;
+}
+var S = {
+  pane: { display: "flex", flexDirection: "column", width: "100%", fontSize: "13px" },
+  row: {
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: "24px",
+    padding: "14px 0",
+    borderBottom: "1px solid rgba(127,127,127,.22)"
+  },
+  label: { display: "flex", flexDirection: "column", gap: "4px", minWidth: 0 },
+  title: { fontWeight: 600 },
+  desc: { margin: 0, fontSize: "12px", opacity: 0.65, lineHeight: 1.55 },
+  control: { display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "8px", flex: "none", flexWrap: "wrap" },
+  block: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+    padding: "16px 0",
+    borderBottom: "1px solid rgba(127,127,127,.22)"
+  },
+  blockHead: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px" },
+  fieldRow: { display: "flex", alignItems: "center", gap: "22px", flexWrap: "wrap" },
+  field: { display: "flex", alignItems: "center", gap: "6px" },
+  input: {
+    width: "84px",
+    padding: "5px 8px",
+    border: "1px solid rgba(127,127,127,.45)",
+    borderRadius: "6px",
+    background: "transparent",
+    color: "inherit",
+    font: "inherit"
+  },
+  select: {
+    padding: "5px 8px",
+    border: "1px solid rgba(127,127,127,.45)",
+    borderRadius: "6px",
+    background: "transparent",
+    color: "inherit",
+    font: "inherit"
+  },
+  check: { width: "16px", height: "16px", margin: 0, accentColor: "currentColor" },
+  actions: { display: "flex", alignItems: "center", gap: "12px", paddingTop: "14px" },
+  button: {
+    padding: "6px 14px",
+    border: "1px solid currentColor",
+    borderRadius: "6px",
+    background: "transparent",
+    color: "inherit",
+    font: "inherit",
+    cursor: "pointer"
+  },
+  status: { fontSize: "12px", opacity: 0.65 },
+  error: { margin: 0, fontSize: "12px", color: "#d94848", wordBreak: "break-all" },
+  note: { margin: 0, paddingTop: "10px", fontSize: "12px", opacity: 0.5 },
+  notice: {
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: "12px",
+    marginBottom: "14px",
+    padding: "12px 14px",
+    border: "1px solid rgba(240,160,32,.35)",
+    borderLeft: "3px solid #f0a020",
+    borderRadius: "8px",
+    background: "rgba(240,160,32,.08)"
+  },
+  noticeTitle: { fontWeight: 600, marginBottom: "4px" },
+  noticeText: { margin: 0, fontSize: "12px", opacity: 0.72, lineHeight: 1.6 },
+  noticeClose: {
+    flex: "none",
+    width: "24px",
+    height: "24px",
+    padding: 0,
+    border: 0,
+    borderRadius: "6px",
+    background: "transparent",
+    color: "inherit",
+    fontSize: "16px",
+    lineHeight: 1,
+    cursor: "pointer",
+    opacity: 0.6
+  }
+};
+function EvolutionSettingsSection() {
+  const [seconds, setSeconds] = (0, import_react.useState)(40);
+  const [retry, setRetry] = (0, import_react.useState)(10);
+  const [enabled, setEnabled] = (0, import_react.useState)(true);
+  const [content, setContent] = (0, import_react.useState)("goal");
+  const [allow, setAllow] = (0, import_react.useState)(true);
+  const [billion, setBillion] = (0, import_react.useState)({ installed: false, enabled: false, dismissed: true });
+  const [busy, setBusy] = (0, import_react.useState)(false);
+  const [status, setStatus] = (0, import_react.useState)("");
+  const [error, setError] = (0, import_react.useState)(null);
+  (0, import_react.useEffect)(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const data = await getJson(ROUTE_PREFIX + "/settings");
+        if (!alive) return;
+        const settings = data && data.settings || {};
+        setSeconds(Number(settings.lateBarSeconds) || 40);
+        setRetry(Number(settings.lateBarRetrySeconds) || 10);
+        setEnabled(settings.lateBarEnabled !== false);
+        setContent(settings.lateBarContent === "full" ? "full" : "goal");
+        setAllow(settings.allowCrossSessionQuery !== false);
+      } catch (e) {
+        if (alive) setError(String(e && e.message || e));
+      }
+      try {
+        const info = await getJson(ROUTE_PREFIX + "/billion-context");
+        if (alive) setBillion({
+          installed: info.installed === true,
+          enabled: info.enabled === true,
+          dismissed: info.bannerDismissed === true
+        });
+      } catch {
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  async function save() {
+    setBusy(true);
+    setError(null);
+    setStatus("");
+    try {
+      const data = await postJson(ROUTE_PREFIX + "/settings", {
+        lateBarSeconds: Number(seconds),
+        lateBarRetrySeconds: Number(retry),
+        lateBarEnabled: enabled === true,
+        lateBarContent: content === "full" ? "full" : "goal",
+        allowCrossSessionQuery: allow === true
+      });
+      const settings = data && data.settings || {};
+      setSeconds(Number(settings.lateBarSeconds) || 40);
+      setRetry(Number(settings.lateBarRetrySeconds) || 10);
+      setEnabled(settings.lateBarEnabled !== false);
+      setContent(settings.lateBarContent === "full" ? "full" : "goal");
+      setAllow(settings.allowCrossSessionQuery !== false);
+      setStatus("\u5DF2\u4FDD\u5B58\uFF1B\u601D\u8003\u63D0\u9192\u4ECE\u4E0B\u4E00\u8F6E\u8D77\u751F\u6548\u3002");
+    } catch (e) {
+      setError(String(e && e.message || e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function dismissBillion() {
+    setBillion((prev) => ({ ...prev, dismissed: true }));
+    try {
+      await postJson(ROUTE_PREFIX + "/billion-context", { action: "dismissBanner" });
+    } catch {
+    }
+  }
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: S.pane, children: [
+    billion.installed && billion.enabled && !billion.dismissed ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: S.notice, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: S.noticeTitle, children: "\u522B\u7528\u4E0A\u4E0B\u6587\u538B\u7F29\u63D2\u4EF6" }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: S.noticeText, children: "billion-context\uFF08bili\uFF09\u4F1A\u8BA9 token \u6D88\u8017\u66F4\u5927\uFF0C\u6548\u679C\u4E5F\u66F4\u5DEE\u3002" })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { type: "button", style: S.noticeClose, "aria-label": "\u5173\u95ED\u63D0\u9192", onClick: () => void dismissBillion(), children: "\xD7" })
+    ] }) : null,
+    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: S.block, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: S.blockHead, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: S.title, children: "\u601D\u8003\u63D0\u9192" }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { style: S.field, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+            "input",
+            {
+              type: "checkbox",
+              checked: enabled,
+              onChange: (e) => setEnabled(e.target.checked),
+              style: S.check,
+              "aria-label": "\u542F\u7528\u601D\u8003\u63D0\u9192"
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: S.desc, children: enabled ? "\u5F00\u542F" : "\u5173\u95ED" })
+        ] })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: S.desc, children: "\u6A21\u578B\u601D\u8003\u8D85\u8FC7\u8D77\u59CB\u79D2\u6570\u65F6\u5148\u63D2\u5165\u4E00\u7248\u8D28\u8BE2\u2014\u2014\u56DB\u6837\u5168\u9F50\u624D\u53D1\uFF1B\u6CA1\u9F50\u5C31\u6BCF\u9694\u300C\u95F4\u9694\u300D\u518D\u770B\u4E00\u6B21\uFF0C\u76F4\u5230\u9F50\u4E86\u6216\u6B63\u6587\u5148\u51FA\u6765\u3002\u8FD9\u4E00\u7248\u4E24\u5934\u6807\u300C\u81EA\u52A8\u63D2\u5165\u300D\uFF0C\u4E0D\u662F\u6B63\u6587\u3002" }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: S.fieldRow, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { style: S.field, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: S.desc, children: "\u8D77\u59CB" }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+            "input",
+            {
+              type: "number",
+              min: "5",
+              max: "600",
+              step: "1",
+              value: seconds,
+              disabled: !enabled,
+              onChange: (e) => setSeconds(e.target.value),
+              style: { ...S.input, opacity: enabled ? 1 : 0.5 },
+              "aria-label": "\u601D\u8003\u63D0\u9192\u79D2\u6570"
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: S.desc, children: "\u79D2" })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { style: S.field, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: S.desc, children: "\u95F4\u9694" }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+            "input",
+            {
+              type: "number",
+              min: "5",
+              max: "120",
+              step: "1",
+              value: retry,
+              disabled: !enabled,
+              onChange: (e) => setRetry(e.target.value),
+              style: { ...S.input, width: "64px", opacity: enabled ? 1 : 0.5 },
+              "aria-label": "\u8D28\u8BE2\u95F4\u9694\u79D2\u6570"
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: S.desc, children: "\u79D2" })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { style: S.field, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: S.desc, children: "\u5185\u5BB9" }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
+            "select",
+            {
+              value: content,
+              disabled: !enabled,
+              onChange: (e) => setContent(e.target.value),
+              style: { ...S.select, opacity: enabled ? 1 : 0.5 },
+              "aria-label": "\u63D0\u9192\u5185\u5BB9",
+              children: [
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", { value: "goal", children: "\u53EA\u62A5\u4E00\u53E5\u72B6\u6001" }),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", { value: "full", children: "\u5B8C\u6574\u5BF9\u9F50\u680F" })
+              ]
+            }
+          )
+        ] })
+      ] })
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: S.row, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: S.label, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: S.title, children: "\u8DE8\u56DE\u5408\u67E5\u8BE2" }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: S.desc, children: "\u5173\u95ED\u540E\uFF0C\u4F1A\u8BDD\u68C0\u7D22\u3001\u5BFC\u51FA\u3001\u6062\u590D\u4E09\u4EF6\u5DE5\u5177\u90FD\u4E0D\u53EF\u8C03\u7528\u3002" })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { style: S.control, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+          "input",
+          {
+            type: "checkbox",
+            checked: allow,
+            onChange: (e) => setAllow(e.target.checked),
+            style: S.check,
+            "aria-label": "\u5141\u8BB8\u8DE8\u56DE\u5408\u67E5\u8BE2"
+          }
+        ),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: S.desc, children: allow ? "\u5141\u8BB8" : "\u7981\u6B62" })
+      ] })
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: S.actions, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { type: "button", style: S.button, disabled: busy, onClick: () => void save(), children: busy ? "\u4FDD\u5B58\u4E2D\u2026" : "\u4FDD\u5B58" }),
+      error ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: S.error, role: "alert", children: error }) : status ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: S.status, children: status }) : null
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: S.note, children: "\u601D\u8003\u63D0\u9192\u53EA\u5BF9\u8FDB\u5316\u6A21\u5F0F\u751F\u6548\uFF1B\u5185\u5BB9\u53EF\u9009\u53EA\u8D28\u8BE2\u672C\u5C42\u76EE\u6807\u6216\u5B8C\u6574\u5BF9\u9F50\u680F\u3002\u8DE8\u56DE\u5408\u67E5\u8BE2\u5F00\u5173\u5BF9\u672C\u673A\u5168\u5C40\u751F\u6548\u3002" })
+  ] });
+}
+var inject = ["slots"];
+function apply(ctx) {
+  ctx.slots.inject("settings.section", () => ctx.slots.register({
+    name: "settings.section",
+    id: "evolution-settings",
+    order: 60,
+    label: "\u8FDB\u5316\u6A21\u5F0F"
+  }, EvolutionSettingsSection));
+}
+
+		return module.exports;
+})());
+		const __ready = __panels.filter((m) => m && typeof m.apply === "function");
+		return {
+			inject: ["slots"],
+			apply(ctx) {
+				for (const m of __ready) {
+					try { m.apply(ctx) } catch (error) { console.warn("[dsh-evolve-preset] 客户端面板未挂上", error) }
+				}
+			},
+		};
 	}
 });

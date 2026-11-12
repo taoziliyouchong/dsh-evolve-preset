@@ -1,12 +1,12 @@
-﻿# 发布清单（dsh-evolve-task-tree）
+# 发布清单（dsh-evolve-task-tree）
 
-本目录是 `dsh-evolve-preset` 仓库里的 `packages/dsh-task-tree`。本包提供会话任务树：侧栏面板、`task-tree` 工具、每轮对齐栏注入，是进化模式的必需依赖。
+本目录是 `dsh-evolve-preset` 仓库里的 `packages/dsh-evolve-task-tree`。本包提供会话任务树：侧栏面板、`task-tree` 工具、每轮对齐栏注入，是进化模式的必需依赖。
 
 ## 0. 本机验证
 
 ```sh
 node scripts/smoke.mjs
-npm pack --dry-run --workspace packages/dsh-task-tree
+npm pack --dry-run --workspace packages/dsh-evolve-task-tree
 ```
 
 冒烟查：package.json 与 `dsh.bundle.patch`、`task-tree` 工具与 `/task-tree` 命令、注入只对 `evolve` 模式生效、`lib/client.js` 外壳 id 等于包名、无环境残留。任一条失败退出码 1。
@@ -39,7 +39,7 @@ npm pack --dry-run --workspace packages/dsh-task-tree
 ## 4. 发布到 npm
 
 ```sh
-npm publish --access public --workspace packages/dsh-task-tree
+npm publish --access public --workspace packages/dsh-evolve-task-tree
 ```
 
 ## 5. 社区目录条目

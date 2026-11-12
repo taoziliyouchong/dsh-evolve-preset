@@ -73,13 +73,17 @@ for (const name of ['dsh-plan-enter', 'dsh-task-tree', 'dsh-term-dict', 'dsh-pro
 }
 
 // 2.5 合包结构：host 模块与客户端外壳
-for (const f of ['task-tree', 'profile-inject', 'profile-panel', 'chat-density', 'check', 'plan-enter']) {
+for (const f of ['settings', 'task-tree', 'profile-inject', 'profile-panel', 'chat-density', 'check', 'plan-enter']) {
   if (existsSync(join(root, 'host', `${f}.js`))) ok(`host/${f}.js 存在`);
   else bad(`缺 host/${f}.js`);
 }
 const client = read('lib/client.js');
 if (client.includes('window.__ModuleLoader__.load(') && client.includes('id: "dsh-evolve-preset"')) ok('客户端外壳 id = 本包名');
 else bad('客户端外壳 id 不是本包名');
+if (client.includes('__panels') && client.includes('typeof m.apply')) ok('客户端多面板统一 apply');
+else bad('客户端面板没有统一 apply（面板不会挂上）');
+if (client.includes('dsh-evolution-settings/api')) ok('客户端含设置面板');
+else bad('客户端缺设置面板');
 for (const f of ['net-clean-check.mjs', 'profile-lint.mjs', 'gate-check.mjs']) {
   if (existsSync(join(root, 'assets', f))) ok(`assets/${f} 存在`);
   else bad(`缺 assets/${f}`);

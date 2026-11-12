@@ -1,4 +1,4 @@
-﻿window.__ModuleLoader__.load({
+window.__ModuleLoader__.load({
 	id: "dsh-evolve-task-tree",
 	factory: (require) => {
 		var module = { exports: {} };
@@ -91,6 +91,11 @@ var CSS = `
 .ztt-statusbtn-on { border-color:var(--dsw-alias-brand-primary); color:var(--dsw-alias-label-primary);
   background:var(--dsw-alias-bg-layer-2); }
 .ztt-cardactions { display:flex; justify-content:flex-end; margin-top:10px; }
+/* \u7F16\u8F91\u6001\uFF1A\u5361\u7247\u6CBF\u7528\u8FDB\u5165\u7F16\u8F91\u524D\u91CF\u5230\u7684\u5927\u5C0F\uFF08\u5BBD\u7531\u5E03\u5C40\u7ED9\uFF09\uFF0C\u8868\u5355\u5728\u5361\u5185\u6EDA\u52A8\u2014\u2014\u70B9\u300C\u7F16\u8F91\u300D\u4E0D\u7F29\u8282\u70B9\u3001
+   \u65C1\u8FB9\u7684\u5361\u4E5F\u4E0D\u8DDF\u7740\u56DE\u6392\u3002 */
+.ztt-card-editing { display:flex; flex-direction:column; overflow:hidden; }
+.ztt-card-editing .ztt-detail { flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
+.ztt-card-editing .ztt-editform { flex:1 1 auto; min-height:0; overflow:auto; padding-right:2px; }
 
 /* \u56FE\u6807\u6309\u94AE\uFF1A\u4E0D\u62A2\u620F\uFF0Chover \u624D\u4EAE */
 .ztt-iconbtn { flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
@@ -411,6 +416,25 @@ function runningNodeId(root) {
   if (root) walk(root);
   return found;
 }
+var AutoArea = function AutoArea2({ value, onChange, rows = 1 }) {
+  const ref = (0, import_react.useRef)(null);
+  (0, import_react.useLayoutEffect)(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.max(el.scrollHeight + 2, 56) + "px";
+  }, [value]);
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+    "textarea",
+    {
+      ref,
+      className: "ztt-editarea",
+      rows,
+      value,
+      onChange
+    }
+  );
+};
 var NodeCard = function NodeCard2({ node, x, y, width, focus, on, open, onToggle, setRef, sessionId, onChanged, runningId, derivedFrom }) {
   const goal = String(node.goal || "").trim();
   const points = pointList(node);
@@ -425,7 +449,11 @@ var NodeCard = function NodeCard2({ node, x, y, width, focus, on, open, onToggle
   const [draftStatus, setDraftStatus] = (0, import_react.useState)("active");
   const [saving, setSaving] = (0, import_react.useState)(false);
   const [error, setError] = (0, import_react.useState)(null);
+  const [editBox, setEditBox] = (0, import_react.useState)(0);
+  const cardEl = (0, import_react.useRef)(null);
   const startEdit = () => {
+    const el = cardEl.current;
+    setEditBox(el && el.offsetHeight > 0 ? el.offsetHeight : 0);
     setDraft({
       goal,
       points: points.join("\n"),
@@ -440,6 +468,7 @@ var NodeCard = function NodeCard2({ node, x, y, width, focus, on, open, onToggle
     setEditing(false);
     setDraft(null);
     setError(null);
+    setEditBox(0);
   };
   const setField = (key) => (event) => {
     const value = event && event.target ? event.target.value : "";
@@ -474,6 +503,7 @@ var NodeCard = function NodeCard2({ node, x, y, width, focus, on, open, onToggle
       }
       setEditing(false);
       setDraft(null);
+      setEditBox(0);
       if (typeof onChanged === "function") onChanged();
     } catch (e) {
       setError(String(e && e.message || e));
@@ -484,10 +514,13 @@ var NodeCard = function NodeCard2({ node, x, y, width, focus, on, open, onToggle
   return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
     "div",
     {
-      ref: setRef,
-      className: "ztt-card ztt-card-" + display + (focus ? " ztt-card-focus" : " ztt-card-minor") + (on ? " ztt-card-on" : "") + (open ? " ztt-card-open" : ""),
+      ref: (el) => {
+        cardEl.current = el;
+        if (typeof setRef === "function") setRef(el);
+      },
+      className: "ztt-card ztt-card-" + display + (focus ? " ztt-card-focus" : " ztt-card-minor") + (on ? " ztt-card-on" : "") + (open ? " ztt-card-open" : "") + (editing ? " ztt-card-editing" : ""),
       "data-editing": editing ? "true" : "false",
-      style: { left: x, top: y, width },
+      style: { left: x, top: y, width, height: editing && editBox > 0 ? editBox : void 0 },
       onClick: () => {
         if (!editing) onToggle(node.id);
       },
@@ -520,19 +553,19 @@ var NodeCard = function NodeCard2({ node, x, y, width, focus, on, open, onToggle
           editing ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "ztt-editform", children: [
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { className: "ztt-editfield", children: [
               /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "ztt-editlabel", children: "\u672C\u5C42\u76EE\u6807" }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("textarea", { className: "ztt-editarea", rows: 2, value: draft ? draft.goal : "", onChange: setField("goal") })
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AutoArea, { rows: 2, value: draft ? draft.goal : "", onChange: setField("goal") })
             ] }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { className: "ztt-editfield", children: [
               /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "ztt-editlabel", children: "\u57FA\u672C\u70B9\uFF08\u6BCF\u884C\u4E00\u6761\uFF09" }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("textarea", { className: "ztt-editarea", rows: 3, value: draft ? draft.points : "", onChange: setField("points") })
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AutoArea, { rows: 3, value: draft ? draft.points : "", onChange: setField("points") })
             ] }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { className: "ztt-editfield", children: [
               /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "ztt-editlabel", children: "\u786C\u9700\u6C42\uFF08\u6BCF\u884C\u4E00\u6761\uFF09" }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("textarea", { className: "ztt-editarea", rows: 2, value: draft ? draft.hard : "", onChange: setField("hard") })
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AutoArea, { rows: 2, value: draft ? draft.hard : "", onChange: setField("hard") })
             ] }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { className: "ztt-editfield", children: [
               /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "ztt-editlabel", children: "\u8F6F\u9700\u6C42\uFF08\u6BCF\u884C\u4E00\u6761\uFF09" }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("textarea", { className: "ztt-editarea", rows: 2, value: draft ? draft.soft : "", onChange: setField("soft") })
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AutoArea, { rows: 2, value: draft ? draft.soft : "", onChange: setField("soft") })
             ] }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "ztt-editfield", children: [
               /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "ztt-editlabel", children: "\u72B6\u6001" }),
@@ -819,7 +852,7 @@ function TaskTreeTab(props) {
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { type: "button", className: "ztt-textbtn", onClick: refresh, children: "\u91CD\u8BD5" }) })
     ] });
   }
-  if (state.mode !== "" && state.mode !== "evolve") {
+  if (state.mode !== "" && state.mode !== "plugin-evolution") {
     return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "ztt-root", children: [
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "ztt-note", children: "\u672C\u4F1A\u8BDD\u4E0D\u662F\u8FDB\u5316\u6A21\u5F0F\uFF1A\u4EFB\u52A1\u6811\u4E0E\u5BF9\u9F50\u680F\u53EA\u5728\u8FDB\u5316\u6A21\u5F0F\u91CC\u7528\u3002" }),
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { type: "button", className: "ztt-textbtn", onClick: refresh, children: "\u5237\u65B0" }) })

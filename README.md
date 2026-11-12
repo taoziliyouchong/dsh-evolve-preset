@@ -36,7 +36,7 @@ dsh plugin --profile desktop add dsh-evolve-preset
 | 位置 | 是什么 |
 | --- | --- |
 | `packages/dsh-evolve-preset/` | **唯一发布的包**：宿主入口、`host/` 六块能力、`lib/client.js` 三块 UI、preset 声明、技能与 assets |
-| `packages/dsh-task-tree/` 等六个目录 | 0.1.x 的分包源码，已并入上面那个包，保留作历史与回退参考，不再单独发布 |
+| `packages/dsh-evolve-task-tree/` 等六个目录 | 0.1.x 的分包源码，已并入上面那个包，保留作历史与回退参考，不再单独发布 |
 | `scripts/` | 开发脚本：逐包冒烟、依赖审查、桩 ctx 加载、发布顺序 |
 
 ## 开发

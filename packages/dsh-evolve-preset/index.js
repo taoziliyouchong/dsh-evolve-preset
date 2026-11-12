@@ -13,6 +13,7 @@ import * as profilePanel from './host/profile-panel.js'
 import * as chatDensity from './host/chat-density.js'
 import * as check from './host/check.js'
 import * as planEnter from './host/plan-enter.js'
+import * as settings from './host/settings.js'
 
 /** Cordis 插件名：与包名一致。 */
 export const name = 'dsh-evolve-preset'
@@ -22,6 +23,7 @@ export const inject = ['tools', 'commands', 'shell', 'sandboxPolicy']
 
 /** 挂载顺序固定；plan-enter 内部自己判 planMode 在不在。 */
 const MODULES = [
+  ['settings', settings],
   ['task-tree', taskTree],
   ['profile-inject', profileInject],
   ['profile-panel', profilePanel],

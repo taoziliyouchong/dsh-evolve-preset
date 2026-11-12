@@ -16,13 +16,30 @@ Evolution mode fixes how the agent frames, does and closes each turn: align on t
 | Profile panel | settings + sidebar | roster, per-entry editing, structure, settings, raw text |
 | Alignment-bar styling | browser half | smaller, dimmer alignment bar and closing check; the body is untouched |
 | Self-check tools | tools | `net-clean-check`, `profile-lint`, `gate-check` |
+| Settings page | settings page + host routes | thinking reminder (start seconds / retry interval / content / on-off), cross-session query switch, compression-plugin notice; stored in `$DSH_HOME/evolve/evolution-settings.json` |
 | Plan-mode entry | tool | `enter_plan_mode`; not registered when the composition has no planMode service |
 
 The term dictionary `dsh-term-dict` is a package dependency and installs with this package.
 
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| `/task-tree` | Show this session's task tree (where you are, what it serves, what else is open); `--all` lists trees across sessions, `--check` runs the health check |
+
 ## Task-tree write guard
 
 Repeated node edits (`align` / `set` / `move` / `drop`) with no new objective (`new` / `add`) in between are throttled: the 1st and 2nd pass; the **3rd is refused with a hint**; the 4th passes with a hint, the 5th is refused, the 6th passes with a hint — odd attempts are refused, even ones pass. Creating a new objective (`new` or `add`) resets the counter.
+
+## Settings page
+
+"Settings → 进化模式" contains:
+
+- **Thinking reminder**: start seconds (5–600, default 40), retry interval (5–120, default 10), content (one-line status / full alignment bar, default one-line), and an on-off switch. It fires only when all four alignment items are present; otherwise it retries at the interval until they are or the body starts.
+- **Cross-session query**: when off, the session search / dump / recover tools are refused.
+- **Compression-plugin notice**: shows once on load (plus a banner on the settings page) when `billion-context` is installed and running.
+
+Settings live in `$DSH_HOME/evolve/evolution-settings.json`; notice state in `$DSH_HOME/evolve/billion-context-notice.json`.
 
 ## Install
 
@@ -31,6 +48,8 @@ dsh plugin --profile desktop add dsh-evolve-preset
 ```
 
 Restart DSH, then pick "进化模式" in Settings → Modes.
+
+Requires DSH >= 0.2.1-alpha.1 (same as `engines.dsh`).
 
 From the repository instead of npm:
 

@@ -7,7 +7,7 @@
  * 设置文件 `$DSH_HOME/evolve/user-profile.settings.json`（画像面板的「设置」页写）。
  * 文件缺失或坏掉＝默认值：所有模式都灌、不截断（上限 0）、任务画像只列类别名。
  */
-import { readFileSync, readdirSync } from 'node:fs'
+import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
@@ -71,6 +71,18 @@ function loadSettings() {
 /** 本会话当前跑的是哪个 preset：只读 Session 投影（内存真值），判不出返回 ''。 */
 function livePreset(ctx, agent) {
   try {
+    if (!agent || !agent.session) return ''
+    // DSH 0.2.2 起的官方入口优先：agentPresets.presetForSession（注册表级 stateOf 已弃用）
+    try {
+      const presets = typeof ctx.get === 'function' ? ctx.get('agentPresets') : undefined
+      if (presets && typeof presets.presetForSession === 'function') {
+        const got = presets.presetForSession(agent.session)
+        const value = typeof got === 'string' ? got : (got && typeof got.id === 'string' ? got.id : '')
+        if (typeof value === 'string' && value.length > 0) return value
+      }
+    } catch {
+      /* 没有 agentPresets：退回投影 */
+    }
     const projections = typeof ctx.get === 'function' ? ctx.get('sessionProjections') : undefined
     const value = projections && typeof projections.stateOf === 'function'
       ? projections.stateOf(agent.session, 'agentPreset')
@@ -170,6 +182,21 @@ function profileText(settings, cwd) {
 /** 每个 agent 只注一次（恢复会话会换新 agent，等于「开场/恢复」再注一次）。 */
 const injected = new WeakSet()
 
+/** 把实时模式写一份给外部进程（hook 之类）用；值没变就不重写。 */
+const published = new Map()
+function publishLive(session, preset) {
+  try {
+    if (!session || !session.id || !preset) return
+    if (published.get(session.id) === preset) return
+    const dir = join(DATA_HOME, 'codex-hooks', 'state')
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, session.id + '.preset-live'), preset, 'utf8')
+    published.set(session.id, preset)
+  } catch {
+    /* 写不上就退回档案判据，不拦主流程 */
+  }
+}
+
 /** 这一轮要不要注：开关、模式、会话静音、不灌注工作空间。 */
 function shouldInject(settings, preset, info) {
   if (!settings.enabled) return false
@@ -186,16 +213,27 @@ function shouldInject(settings, preset, info) {
 }
 
 export function apply(ctx) {
+  // agent 一建出来就把实时模式写一份，给外部进程读「当前模式」。
+  try {
+    ctx.on('agent/created', ({ agent }) => {
+      try {
+        if (agent && agent.session) publishLive(agent.session, livePreset(ctx, agent))
+      } catch { /* 拿不到就不写 */ }
+    })
+  } catch { /* 没有 agent 事件：只靠 pre-step */ }
+
   // 每步先算实时模式；满足设置且本 agent 还没注过，才把画像挂到这一步的入参上。
   try {
     ctx.on('agent/pre-step', async ({ agent }, next) => {
       const downstream = await next()
       try {
         if (!agent || !agent.session) return downstream
+        const preset = livePreset(ctx, agent)
+        publishLive(agent.session, preset)
         if (downstream.kind !== 'enter') return downstream
         const settings = loadSettings()
         const info = sessionInfo(agent)
-        if (!shouldInject(settings, livePreset(ctx, agent), info)) return downstream
+        if (!shouldInject(settings, preset, info)) return downstream
         if (injected.has(agent)) return downstream
         const text = profileText(settings, info.cwd)
         if (!text) return downstream

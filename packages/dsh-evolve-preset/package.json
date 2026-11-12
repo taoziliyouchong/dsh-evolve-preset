@@ -1,6 +1,6 @@
 {
   "name": "dsh-evolve-preset",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "进化模式整套：一个包装下模式本体与全部配套——任务树、画像注入与面板、对齐栏样式、自查工具、计划模式入口。每轮先对齐需求、按规则干活、三块回复收尾。",
   "type": "module",
   "main": "index.js",
@@ -13,7 +13,6 @@
     "index.js",
     "host",
     "lib/client.js",
-    "src",
     "cordis.patch.yml",
     "skills",
     "assets",
@@ -31,11 +30,7 @@
     }
   },
   "dependencies": {
-    "dsh-term-dict": "*"
-  },
-  "peerDependencies": {
-    "@deepseek-ai/dsh-tools": ">=0.2.1-alpha.1",
-    "@deepseek-ai/dsh-llm": ">=0.2.1-alpha.1"
+    "dsh-term-dict": ">=0.2.0"
   },
   "engines": {
     "node": "^22.19.0 || >=24.0.0",
@@ -56,6 +51,7 @@
   "license": "MIT",
   "scripts": {
     "check": "node --check index.js",
+    "build:client": "node scripts/build-settings-client.mjs && node ../../scripts/build-preset-client.mjs",
     "smoke": "node scripts/smoke.mjs"
   },
   "repository": {

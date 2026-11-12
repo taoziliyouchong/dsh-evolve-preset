@@ -27,6 +27,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, openSy
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { zstdDecompressSync } from 'node:zlib'
+import { readSettings } from './settings.js'
 
 /** Cordis 插件名。 */
 export const name = 'dsh-evolve-task-tree'
@@ -117,7 +118,20 @@ function sessionIdFromAny(source) {
 function presetFromAny(source, projections) {
   try {
     const session = source?.agent?.session ?? source?.session ?? source?.exec?.agent?.session
-    if (!session || !projections || typeof projections.stateOf !== 'function') return undefined
+    if (!session) return undefined
+    // DSH 0.2.2 起的官方入口：agentPresets.presetForSession（注册表级 stateOf 已弃用）。
+    try {
+      const ctx = source?.agent?.ctx ?? source?.ctx ?? source?.exec?.agent?.ctx
+      const presets = ctx && typeof ctx.get === 'function' ? ctx.get('agentPresets') : undefined
+      if (presets && typeof presets.presetForSession === 'function') {
+        const got = presets.presetForSession(session)
+        const value = typeof got === 'string' ? got : (got && typeof got.id === 'string' ? got.id : undefined)
+        if (typeof value === 'string' && value.length > 0) return value
+      }
+    } catch {
+      /* 没有 agentPresets：退回投影 */
+    }
+    if (!projections || typeof projections.stateOf !== 'function') return undefined
     const preset = projections.stateOf(session, 'agentPreset')
     return typeof preset === 'string' && preset.length > 0 ? preset : undefined
   } catch {
@@ -925,20 +939,59 @@ function replyAlignBlock(block, gate) {
  * 副作用（用户已知并选了这个做法）：这一版会留在最终回复里，正文里模型还会再给最终版；
  * 自动回写因此改成只认正文最后一版（parseAlignBlockLast）。
  */
-const LATE_BAR_MS = 40000
-/** 注入块用大序号，避开模型自己占用的 0..n（装配按「首次出现顺序」排，不按序号大小）。 */
 const LATE_BAR_INDEX = 900000
 const LATE_BAR_ARM_TTL = 5 * 60 * 1000
 
 /** 每个会话当前这一轮的挂载点：{ turn, at }；turn 开始时挂上，插过一版就置 fired。 */
 const lateBarArms = new Map()
 
-/** 当前这一版对齐栏，做成可直接塞进回复的草稿块；没有对齐栏就返回空串。 */
-function draftAlignText(sessionId) {
+/** 思考提醒的起始秒数（设置页可改，默认 40 秒，夹在 5–600）。 */
+function lateBarSeconds() {
+  return readSettings().lateBarSeconds
+}
+
+/** 四样没齐时的复查间隔（默认 10 秒，夹在 5–120）。 */
+function lateBarRetrySeconds() {
+  return readSettings().lateBarRetrySeconds
+}
+
+/** 思考提醒总开关：关掉后这一轮不挂、不插。 */
+function lateBarEnabled() {
+  return readSettings().lateBarEnabled
+}
+
+/** 提醒内容：goal＝只报一句状态；full＝完整对齐栏。 */
+function lateBarContent() {
+  return readSettings().lateBarContent
+}
+
+/**
+ * 这一层四样还缺哪几项：空着就是缺；四样齐了才发 40 秒质询。
+ * 「无」是写明的「一项都没有」，算写齐（捕获回路会原样保留它）。
+ */
+function alignGaps(align) {
+  const gaps = []
+  if (!String((align && align.goal) || '').trim()) gaps.push('本层目标')
+  const pts = align && Array.isArray(align.points) ? align.points.filter((p) => String(p || '').trim()) : []
+  if (pts.length === 0) gaps.push('基本点')
+  if (!String((align && align.hard) || '').trim()) gaps.push('硬需求')
+  if (!String((align && align.soft) || '').trim()) gaps.push('软需求')
+  return gaps
+}
+
+/**
+ * 40 秒质询：四样（本层目标／基本点／硬需求／软需求）全齐了才发。
+ * 缺任何一项都返回空串，由 lateBarStream 隔「复查间隔」再看一次——直到齐了，
+ * 或模型的正文/工具调用先出来。这样从不摆「（待填）／无」这种半成品。
+ */
+function draftAlignText(sessionId, elapsedSec) {
   const rec = loadTree(sessionId)
-  if (!rec) return ''
-  const align = alignOf(rec)
-  if (!align || !String(align.goal || '').trim()) return ''
+  const align = rec ? alignOf(rec) : null
+  if (alignGaps(align).length > 0) return ''
+  const sec = Number.isFinite(elapsedSec) ? Math.round(elapsedSec) : lateBarSeconds()
+  if (lateBarContent() === 'goal') {
+    return '> ⏳ 思考超过 ' + sec + ' 秒 · 自动插入 · 这一版对齐栏四样已在（正文随后）。\n\n'
+  }
   const block = renderAlignBlock(rec, null, align)
   // 与正式回复的对齐栏同款：引用块 + 行末反斜杠。
   // 纯文本单换行会被 Markdown 当软换行拼成一行（实测），必须靠引用块与硬换行保住分行。
@@ -947,91 +1000,127 @@ function draftAlignText(sessionId) {
     .filter((l) => l.trim() !== '')
     .map((l) => `> ${l}\\`)
     .join('\n')
-  return `> ⏳ 思考超过 40 秒 · 当前对齐栏草稿（正文随后）\\\n${quoted}\n\n`
+  // 两头标「自动插入」——这块不是正文，模型别照着再写一张，人也要一眼分出哪版是插的。
+  return `> ⏳ 思考超过 ${sec} 秒 · 自动插入 · 先把这一版对齐栏交给你（正文随后）\\\n${quoted}\n> —— 自动插入结束，正文继续 ——\\\n\n`
 }
 
-/** 一轮开始时挂上（同一轮只挂一次）；没有树/对齐栏就不挂。 */
+/**
+ * 一轮开始时挂上（同一轮只挂一次）。
+ * 2026-11-11：挂载不再要求「此刻已有对齐栏」——那正是这个提示要覆盖的情形；非进化模式不挂
+ * （标记在 agent/created 时写：'other' 才是判出来的非进化模式，''＝判不出，放行）。
+ * 树在首轮 prompt 构建时才长出来（injectTextForSession），所以挂载时没有树不算错：
+ * 到 llm/stream 那一刻树已经在了，draftAlignText 会现读。
+ */
 function armLateBar(sessionId, turn) {
   if (!sessionId || !Number.isSafeInteger(turn)) return
+  if (!lateBarEnabled()) return
   const current = lateBarArms.get(sessionId)
   if (current && current.turn === turn && !current.done) return
-  if (!draftAlignText(sessionId)) return
+  if (presetMarkerOf(sessionId) === 'other') return
   lateBarArms.set(sessionId, { turn, at: Date.now(), fired: false, done: false })
 }
 
 /**
- * 包住一条模型输出流：到 dueIn 毫秒时插一个文本块（只插一次、且模型还没吐出正文才插）。
+ * 包住一条模型输出流：到检查点（起始秒数起，每隔「复查间隔」一次）现读树里的对齐栏——
+ * 四样齐了才插一版；没齐就等下一个检查点，直到插过、或模型先吐出正文/工具调用。
  * 注入块用独立序号；模型自己的块序号不变。onInject 在真的插进去时回调一次（挂载点置 fired）。
  */
-async function* lateBarStream(source, text, dueIn, onInject) {
+async function* lateBarStream(source, sessionId, dueIn, startedAt, onInject, retryMs) {
   const iter = source[Symbol.asyncIterator]()
-  const start = Date.now()
-  const dueAt = start + Math.max(0, dueIn)
-  let timerDone = false
-  let timer = null
-  const timerWait = new Promise((resolve) => {
-    timer = setTimeout(() => { timerDone = true; resolve() }, Math.max(0, dueAt - start))
-    if (timer && typeof timer.unref === 'function') timer.unref()
-  })
+  const baseAt = Number.isFinite(startedAt) ? startedAt : Date.now()
+  const retry = Number.isFinite(retryMs) && retryMs > 0 ? retryMs : lateBarRetrySeconds() * 1000
+  let nextAt = Date.now() + Math.max(0, dueIn)
+  let stop = false
   let pending = null
-  let injected = false
-  let sawText = false
-  let sawTool = false
-  const emitDraft = function* () {
+  let timer = null
+  let timerWait = new Promise(() => {})
+  const clearTimer = () => {
+    if (timer) {
+      clearTimeout(timer)
+      timer = null
+    }
+  }
+  const halt = () => {
+    stop = true
+    clearTimer()
+    timerWait = new Promise(() => {})
+  }
+  const schedule = () => {
+    if (stop) return
+    clearTimer()
+    timerWait = new Promise((resolve) => {
+      timer = setTimeout(resolve, Math.max(0, nextAt - Date.now()))
+      if (timer && typeof timer.unref === 'function') timer.unref()
+    })
+  }
+  const emitDraft = function* (text) {
     if (typeof onInject === 'function') onInject()
     yield { type: 'block-start', index: LATE_BAR_INDEX, blockType: 'text' }
     yield { type: 'text-delta', index: LATE_BAR_INDEX, text }
     yield { type: 'block-end', index: LATE_BAR_INDEX, block: { type: 'text', text } }
   }
   try {
-    // 已经过了 40 秒（例如后面的步骤才接上）：流一开头就插。
+    // 已经过了 40 秒（例如后面的步骤才接上）：先当场看一次，有草稿就插。
     if (dueIn <= 0) {
-      injected = true
-      yield* emitDraft()
+      const first = draftAlignText(sessionId, (Date.now() - baseAt) / 1000)
+      if (first) {
+        halt()
+        yield* emitDraft(first)
+      } else {
+        nextAt = Date.now() + retry
+      }
     }
+    schedule()
     for (;;) {
       if (!pending) pending = iter.next()
-      let outcome
-      if (timerDone) outcome = await pending.then((v) => ({ v }))
-      else outcome = await Promise.race([pending.then((v) => ({ v })), timerWait.then(() => ({ timeout: true }))])
-      if (outcome.timeout) {
-        if (timerDone && !injected && !sawText && !sawTool) {
-          injected = true
-          yield* emitDraft()
+      const raced = await Promise.race([
+        pending.then((v) => ({ v })),
+        timerWait.then(() => ({ timeout: true })),
+      ])
+      if (raced.timeout) {
+        if (stop) continue
+        // 有草稿才插；没有就往后挪一个检查点。
+        const text = draftAlignText(sessionId, (Date.now() - baseAt) / 1000)
+        if (text) {
+          halt()
+          yield* emitDraft(text)
+        } else {
+          nextAt += retry
+          schedule()
         }
         continue
       }
-      const { value, done } = outcome.v
+      const { value, done } = raced.v
       pending = null
       if (done) return
-      if (value && value.type === 'text-delta' && typeof value.text === 'string' && value.text.trim() !== '') sawText = true
-      // 已经出过工具调用就不能再插：注入块会落在 tool_use 之后或两次调用之间，
-      // 服务端要求 tool_use 后面紧跟 tool_result，整条请求会被判 INVALID_REQUEST。
-      if (value && value.type === 'block-start' && value.blockType === 'tool-call') sawTool = true
+      // 模型开始吐正文：不再插。出过工具调用也不能插——注入块落在 tool_use 后面
+      // 会把整条请求判成 INVALID_REQUEST（服务端要求 tool_use 紧跟 tool_result）。
+      if (value && value.type === 'text-delta' && typeof value.text === 'string' && value.text.trim() !== '') halt()
+      if (value && value.type === 'block-start' && value.blockType === 'tool-call') halt()
       yield value
     }
   } finally {
-    if (timer) clearTimeout(timer)
+    clearTimer()
   }
 }
 
-/** 挂上一个会话的「40 秒先交对齐栏」；返回摘除函数（宿主事件注册用）。 */
+/** 挂上一个会话的「思考提醒」；返回摘除函数（宿主事件注册用）。 */
 function installLateBar(ctx) {
   try {
     ctx.on('llm/stream', (options, next) => {
       const purpose = options && options.purpose
       const sid = options && options.sessionId ? String(options.sessionId) : ''
       if (!sid || purpose) return next()
+      if (!lateBarEnabled()) return next()
       const arm = lateBarArms.get(sid)
       if (!arm || arm.fired || arm.done) return next()
       if (Date.now() - arm.at > LATE_BAR_ARM_TTL) {
         lateBarArms.delete(sid)
         return next()
       }
-      const text = draftAlignText(sid)
-      if (!text) return next()
-      const dueIn = arm.at + LATE_BAR_MS - Date.now()
-      return lateBarStream(next(), text, dueIn, () => { arm.fired = true })
+      // 不在这里取内容：到点后由 lateBarStream 现读树里的草稿；没草稿就等下一个检查点。
+      const dueIn = arm.at + lateBarSeconds() * 1000 - Date.now()
+      return lateBarStream(next(), sid, dueIn, arm.at, () => { arm.fired = true })
     })
   } catch {
     /* 挂不上：功能不生效，不影响树的其余部分 */
@@ -1190,7 +1279,7 @@ function renderInject(rec, alignMode = true) {
   }
   if (autoRoot) {
     lines.push(alignMode
-      ? `  ⚠ 根还是占位「${autoRoot.title}」：出示对齐栏的同一轮就要 action=align 把目标写进去（或 action=new 换成本次任务），别让它空着。`
+      ? `  ⚠ 根还是占位「${autoRoot.title}」：还没写目标就先 action=align（或 action=new）把这一轮的目标写进树，再调别的工具——40 秒草稿只读树，树空着就没有可显示的内容。`
       : `  ⚠ 根还是占位「${autoRoot.title}」：要立树就 action=align 写目标，或 action=new 换成本次任务。`)
   }
   let count = 0
@@ -2416,7 +2505,7 @@ export function apply(ctx) {
   }
 
   ctx.commands.register({
-    name: 'dsh-evolve-task-tree',
+    name: 'task-tree',
     description: '查看本会话的任务树（方向图：做到哪／替谁做／旁边还有谁）；--all 列各会话的树，--check 出体检',
     input: { hint: '[--all|--check]' },
     handler: async (params) => {

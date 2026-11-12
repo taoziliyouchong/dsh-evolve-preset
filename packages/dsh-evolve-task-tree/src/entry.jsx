@@ -112,6 +112,11 @@ const CSS = `
 .ztt-statusbtn-on { border-color:var(--dsw-alias-brand-primary); color:var(--dsw-alias-label-primary);
   background:var(--dsw-alias-bg-layer-2); }
 .ztt-cardactions { display:flex; justify-content:flex-end; margin-top:10px; }
+/* 编辑态：卡片沿用进入编辑前量到的大小（宽由布局给），表单在卡内滚动——点「编辑」不缩节点、
+   旁边的卡也不跟着回排。 */
+.ztt-card-editing { display:flex; flex-direction:column; overflow:hidden; }
+.ztt-card-editing .ztt-detail { flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
+.ztt-card-editing .ztt-editform { flex:1 1 auto; min-height:0; overflow:auto; padding-right:2px; }
 
 /* 图标按钮：不抢戏，hover 才亮 */
 .ztt-iconbtn { flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
@@ -485,6 +490,26 @@ function runningNodeId(root) {
   return found
 }
 
+/** 编辑框：高度跟着内容走，框里不出现上下滚——点开编辑一次看全四样。 */
+const AutoArea = function AutoArea({ value, onChange, rows = 1 }) {
+  const ref = useRef(null)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = Math.max(el.scrollHeight + 2, 56) + 'px'
+  }, [value])
+  return (
+    <textarea
+      ref={ref}
+      className="ztt-editarea"
+      rows={rows}
+      value={value}
+      onChange={onChange}
+    />
+  )
+}
+
 /** 一张节点卡（HTML）：收起＝标题＋状态；展开＝对齐栏字段＋「编辑」入口；编辑态＝字段与状态表单。 */
 const NodeCard = function NodeCard({ node, x, y, width, focus, on, open, onToggle, setRef, sessionId, onChanged, runningId, derivedFrom }) {
   const goal = String(node.goal || '').trim()
@@ -500,8 +525,14 @@ const NodeCard = function NodeCard({ node, x, y, width, focus, on, open, onToggl
   const [draftStatus, setDraftStatus] = useState('active')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  // 进入编辑前量到的卡片高度：编辑态沿用它（宽由布局给），表单在卡内滚动，
+  // 点「编辑」时整个节点不缩、旁边的卡也不跟着回排。
+  const [editBox, setEditBox] = useState(0)
+  const cardEl = useRef(null)
 
   const startEdit = () => {
+    const el = cardEl.current
+    setEditBox(el && el.offsetHeight > 0 ? el.offsetHeight : 0)
     setDraft({
       goal,
       points: points.join('\n'),
@@ -517,6 +548,7 @@ const NodeCard = function NodeCard({ node, x, y, width, focus, on, open, onToggl
     setEditing(false)
     setDraft(null)
     setError(null)
+    setEditBox(0)
   }
 
   const setField = (key) => (event) => {
@@ -553,6 +585,7 @@ const NodeCard = function NodeCard({ node, x, y, width, focus, on, open, onToggl
       }
       setEditing(false)
       setDraft(null)
+      setEditBox(0)
       if (typeof onChanged === 'function') onChanged()
     } catch (e) {
       setError(String((e && e.message) || e))
@@ -563,12 +596,13 @@ const NodeCard = function NodeCard({ node, x, y, width, focus, on, open, onToggl
 
   return (
     <div
-      ref={setRef}
+      ref={(el) => { cardEl.current = el; if (typeof setRef === 'function') setRef(el) }}
       className={'ztt-card ztt-card-' + display
         + (focus ? ' ztt-card-focus' : ' ztt-card-minor')
-        + (on ? ' ztt-card-on' : '') + (open ? ' ztt-card-open' : '')}
+        + (on ? ' ztt-card-on' : '') + (open ? ' ztt-card-open' : '')
+        + (editing ? ' ztt-card-editing' : '')}
       data-editing={editing ? 'true' : 'false'}
-      style={{ left: x, top: y, width }}
+      style={{ left: x, top: y, width, height: editing && editBox > 0 ? editBox : undefined }}
       onClick={() => { if (!editing) onToggle(node.id) }}
     >
       <div className="ztt-title">{goal !== '' ? goal : node.title}</div>
@@ -596,19 +630,19 @@ const NodeCard = function NodeCard({ node, x, y, width, focus, on, open, onToggl
             <div className="ztt-editform">
               <label className="ztt-editfield">
                 <span className="ztt-editlabel">本层目标</span>
-                <textarea className="ztt-editarea" rows={2} value={draft ? draft.goal : ''} onChange={setField('goal')} />
+                <AutoArea rows={2} value={draft ? draft.goal : ''} onChange={setField('goal')} />
               </label>
               <label className="ztt-editfield">
                 <span className="ztt-editlabel">基本点（每行一条）</span>
-                <textarea className="ztt-editarea" rows={3} value={draft ? draft.points : ''} onChange={setField('points')} />
+                <AutoArea rows={3} value={draft ? draft.points : ''} onChange={setField('points')} />
               </label>
               <label className="ztt-editfield">
                 <span className="ztt-editlabel">硬需求（每行一条）</span>
-                <textarea className="ztt-editarea" rows={2} value={draft ? draft.hard : ''} onChange={setField('hard')} />
+                <AutoArea rows={2} value={draft ? draft.hard : ''} onChange={setField('hard')} />
               </label>
               <label className="ztt-editfield">
                 <span className="ztt-editlabel">软需求（每行一条）</span>
-                <textarea className="ztt-editarea" rows={2} value={draft ? draft.soft : ''} onChange={setField('soft')} />
+                <AutoArea rows={2} value={draft ? draft.soft : ''} onChange={setField('soft')} />
               </label>
               <div className="ztt-editfield">
                 <span className="ztt-editlabel">状态</span>
@@ -937,7 +971,7 @@ export function TaskTreeTab(props) {
     )
   }
   // 任务树与对齐栏只属于进化模式：标准等模式里不画树、不画对齐卡（后端也不写）。
-  if (state.mode !== '' && state.mode !== 'evolve') {
+  if (state.mode !== '' && state.mode !== 'plugin-evolution') {
     return (
       <div className="ztt-root">
         <p className="ztt-note">本会话不是进化模式：任务树与对齐栏只在进化模式里用。</p>
