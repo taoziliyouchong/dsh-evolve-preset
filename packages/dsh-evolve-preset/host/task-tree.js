@@ -960,9 +960,14 @@ function lateBarEnabled() {
   return readSettings().lateBarEnabled
 }
 
-/** 提醒内容：goal＝只报一句状态；full＝完整对齐栏。 */
+/** 提醒内容：goal＝只列本层目标；full＝完整对齐栏。 */
 function lateBarContent() {
   return readSettings().lateBarContent
+}
+
+/** 收尾检测开关（2026-11-13）：关掉时注入里多一行，正文按它只出两块、不做五项。 */
+function closingCheckEnabled() {
+  return readSettings().closingCheck !== false
 }
 
 /**
@@ -980,17 +985,19 @@ function alignGaps(align) {
 }
 
 /**
- * 40 秒质询：四样（本层目标／基本点／硬需求／软需求）全齐了才发。
- * 缺任何一项都返回空串，由 lateBarStream 隔「复查间隔」再看一次——直到齐了，
- * 或模型的正文/工具调用先出来。这样从不摆「（待填）／无」这种半成品。
+ * 40 秒初稿插入（2026-11-13 口径）：到点就把当前这一版对齐栏初稿交出去——
+ * 只要有本层目标就发，缺的项照实写「无」，不再等四样齐。
+ * 连本层目标都还没写出来才返回空串，由 lateBarStream 隔「复查间隔」再看一次。
  */
 function draftAlignText(sessionId, elapsedSec) {
   const rec = loadTree(sessionId)
   const align = rec ? alignOf(rec) : null
-  if (alignGaps(align).length > 0) return ''
+  const goal = String((align && align.goal) || '').trim()
+  if (!rec || !goal) return ''
   const sec = Number.isFinite(elapsedSec) ? Math.round(elapsedSec) : lateBarSeconds()
   if (lateBarContent() === 'goal') {
-    return '> ⏳ 思考超过 ' + sec + ' 秒 · 自动插入 · 这一版对齐栏四样已在（正文随后）。\n\n'
+    // 只显示目标时，插进来的就只有对齐栏初稿那一行，不加提示语。
+    return '> **本层目标**：' + goal + '\\\n\n'
   }
   const block = renderAlignBlock(rec, null, align)
   // 与正式回复的对齐栏同款：引用块 + 行末反斜杠。
@@ -1001,7 +1008,7 @@ function draftAlignText(sessionId, elapsedSec) {
     .map((l) => `> ${l}\\`)
     .join('\n')
   // 两头标「自动插入」——这块不是正文，模型别照着再写一张，人也要一眼分出哪版是插的。
-  return `> ⏳ 思考超过 ${sec} 秒 · 自动插入 · 先把这一版对齐栏交给你（正文随后）\\\n${quoted}\n> —— 自动插入结束，正文继续 ——\\\n\n`
+  return `> ⏳ 思考超过 ${sec} 秒 · 自动插入 · 先把这一版对齐栏初稿交给你（正文随后）\\\n${quoted}\n> —— 自动插入结束，正文继续 ——\\\n\n`
 }
 
 /**
@@ -1243,6 +1250,10 @@ function renderInject(rec, alignMode = true) {
   // 2026-11-03：开头硬提示——动手前先回顾上一轮的进度、基本点与需求（思维正文的「先看树」配套）。
   if (alignMode) {
     lines.push('[先回顾] 动手前先看下面这段：上一轮做到哪、基本点与软硬需求是什么、当前在第几层哪一支——据此再动手；不是重新设计，是先认清现在的位置。')
+    // 2026-11-13：收尾检测开关关掉时明说一句——模型据此只出两块、不做五项。
+    if (!closingCheckEnabled()) {
+      lines.push('[收尾检测：关] 设置里关掉了收尾检测——本轮回复只出两块（对齐栏、正文），不做收尾五项、不列收尾检测块。')
+    }
   }
   const align = alignOf(rec)
   if (align && alignMode) {

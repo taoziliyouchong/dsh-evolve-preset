@@ -16,7 +16,7 @@ Evolution mode fixes how the agent frames, does and closes each turn: align on t
 | Profile panel | settings + sidebar | roster, per-entry editing, structure, settings, raw text |
 | Alignment-bar styling | browser half | smaller, dimmer alignment bar and closing check; the body is untouched |
 | Self-check tools | tools | `net-clean-check`, `profile-lint`, `gate-check` |
-| Settings page | settings page + host routes | thinking reminder (start seconds / retry interval / content / on-off), cross-session query switch, compression-plugin notice; stored in `$DSH_HOME/evolve/evolution-settings.json` |
+| Settings page | settings page + host routes | thinking reminder (start seconds / retry interval / content / on-off), closing-check switch, cross-session query switch, compression-plugin notice; stored in `$DSH_HOME/evolve/evolution-settings.json` |
 | Plan-mode entry | tool | `enter_plan_mode`; not registered when the composition has no planMode service |
 
 The term dictionary `dsh-term-dict` is a package dependency and installs with this package.
@@ -35,9 +35,12 @@ Repeated node edits (`align` / `set` / `move` / `drop`) with no new objective (`
 
 "Settings → 进化模式" contains:
 
-- **Thinking reminder**: start seconds (5–600, default 40), retry interval (5–120, default 10), content (one-line status / full alignment bar, default one-line), and an on-off switch. It fires only when all four alignment items are present; otherwise it retries at the interval until they are or the body starts.
+- **Thinking reminder**: start seconds (5–600, default 40), retry interval (5–120, default 10), content (goal line only / full alignment bar, default goal line only), and an on-off switch. When the time comes it hands over the current alignment draft — anything with a goal line goes out, missing items read “none”; the interval only gates retries while no goal line exists yet.
+- **Closing check**: when off, replies carry only the alignment bar and body; the five checks are skipped and the third block does not appear. Turning it back on restores the block.
 - **Cross-session query**: when off, the session search / dump / recover tools are refused.
 - **Compression-plugin notice**: shows once on load (plus a banner on the settings page) when `billion-context` is installed and running.
+
+Changes on the settings page are saved immediately — no Save button.
 
 Settings live in `$DSH_HOME/evolve/evolution-settings.json`; notice state in `$DSH_HOME/evolve/billion-context-notice.json`.
 

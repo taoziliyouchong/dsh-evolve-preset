@@ -3118,10 +3118,13 @@ function EvolutionSettingsSection() {
   const [enabled, setEnabled] = (0, import_react.useState)(true);
   const [content, setContent] = (0, import_react.useState)("goal");
   const [allow, setAllow] = (0, import_react.useState)(true);
+  const [closing, setClosing] = (0, import_react.useState)(true);
   const [billion, setBillion] = (0, import_react.useState)({ installed: false, enabled: false, dismissed: true });
   const [busy, setBusy] = (0, import_react.useState)(false);
   const [status, setStatus] = (0, import_react.useState)("");
   const [error, setError] = (0, import_react.useState)(null);
+  const timerRef = (0, import_react.useRef)(null);
+  const pendingRef = (0, import_react.useRef)({});
   (0, import_react.useEffect)(() => {
     let alive = true;
     (async () => {
@@ -3134,6 +3137,7 @@ function EvolutionSettingsSection() {
         setEnabled(settings.lateBarEnabled !== false);
         setContent(settings.lateBarContent === "full" ? "full" : "goal");
         setAllow(settings.allowCrossSessionQuery !== false);
+        setClosing(settings.closingCheck !== false);
       } catch (e) {
         if (alive) setError(String(e && e.message || e));
       }
@@ -3149,32 +3153,34 @@ function EvolutionSettingsSection() {
     })();
     return () => {
       alive = false;
+      if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, []);
-  async function save() {
-    setBusy(true);
+  async function persist(patch) {
     setError(null);
-    setStatus("");
     try {
-      const data = await postJson(ROUTE_PREFIX + "/settings", {
-        lateBarSeconds: Number(seconds),
-        lateBarRetrySeconds: Number(retry),
-        lateBarEnabled: enabled === true,
-        lateBarContent: content === "full" ? "full" : "goal",
-        allowCrossSessionQuery: allow === true
-      });
+      const data = await postJson(ROUTE_PREFIX + "/settings", patch);
       const settings = data && data.settings || {};
-      setSeconds(Number(settings.lateBarSeconds) || 40);
-      setRetry(Number(settings.lateBarRetrySeconds) || 10);
       setEnabled(settings.lateBarEnabled !== false);
       setContent(settings.lateBarContent === "full" ? "full" : "goal");
       setAllow(settings.allowCrossSessionQuery !== false);
-      setStatus("\u5DF2\u4FDD\u5B58\uFF1B\u601D\u8003\u63D0\u9192\u4ECE\u4E0B\u4E00\u8F6E\u8D77\u751F\u6548\u3002");
+      setClosing(settings.closingCheck !== false);
+      setStatus("\u5DF2\u4FDD\u5B58");
     } catch (e) {
+      setStatus("");
       setError(String(e && e.message || e));
-    } finally {
-      setBusy(false);
     }
+  }
+  function schedule(patch) {
+    pendingRef.current = { ...pendingRef.current, ...patch };
+    setBusy(true);
+    setStatus("\u4FDD\u5B58\u4E2D\u2026");
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      const body = pendingRef.current;
+      pendingRef.current = {};
+      void persist(body).finally(() => setBusy(false));
+    }, 300);
   }
   async function dismissBillion() {
     setBillion((prev) => ({ ...prev, dismissed: true }));
@@ -3200,7 +3206,10 @@ function EvolutionSettingsSection() {
             {
               type: "checkbox",
               checked: enabled,
-              onChange: (e) => setEnabled(e.target.checked),
+              onChange: (e) => {
+                setEnabled(e.target.checked);
+                schedule({ lateBarEnabled: e.target.checked });
+              },
               style: S.check,
               "aria-label": "\u542F\u7528\u601D\u8003\u63D0\u9192"
             }
@@ -3221,7 +3230,10 @@ function EvolutionSettingsSection() {
               step: "1",
               value: seconds,
               disabled: !enabled,
-              onChange: (e) => setSeconds(e.target.value),
+              onChange: (e) => {
+                setSeconds(e.target.value);
+                schedule({ lateBarSeconds: Number(e.target.value) });
+              },
               style: { ...S.input, opacity: enabled ? 1 : 0.5 },
               "aria-label": "\u601D\u8003\u63D0\u9192\u79D2\u6570"
             }
@@ -3239,7 +3251,10 @@ function EvolutionSettingsSection() {
               step: "1",
               value: retry,
               disabled: !enabled,
-              onChange: (e) => setRetry(e.target.value),
+              onChange: (e) => {
+                setRetry(e.target.value);
+                schedule({ lateBarRetrySeconds: Number(e.target.value) });
+              },
               style: { ...S.input, width: "64px", opacity: enabled ? 1 : 0.5 },
               "aria-label": "\u8D28\u8BE2\u95F4\u9694\u79D2\u6570"
             }
@@ -3253,16 +3268,41 @@ function EvolutionSettingsSection() {
             {
               value: content,
               disabled: !enabled,
-              onChange: (e) => setContent(e.target.value),
+              onChange: (e) => {
+                setContent(e.target.value);
+                schedule({ lateBarContent: e.target.value });
+              },
               style: { ...S.select, opacity: enabled ? 1 : 0.5 },
               "aria-label": "\u63D0\u9192\u5185\u5BB9",
               children: [
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", { value: "goal", children: "\u53EA\u62A5\u4E00\u53E5\u72B6\u6001" }),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", { value: "goal", children: "\u53EA\u5217\u672C\u5C42\u76EE\u6807" }),
                 /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", { value: "full", children: "\u5B8C\u6574\u5BF9\u9F50\u680F" })
               ]
             }
           )
         ] })
+      ] })
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: S.row, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: S.label, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: S.title, children: "\u6536\u5C3E\u68C0\u6D4B" }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: S.desc, children: "\u5173\u6389\u540E\u6BCF\u8F6E\u4E0D\u518D\u601D\u8003\u90A3\u4E94\u9879\uFF0C\u56DE\u590D\u53EA\u51FA\u5BF9\u9F50\u680F\u548C\u6B63\u6587\u4E24\u5757\uFF1B\u5F00\u56DE\u6765\u6062\u590D\u7B2C\u4E09\u5757\u3002" })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { style: S.control, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+          "input",
+          {
+            type: "checkbox",
+            checked: closing,
+            onChange: (e) => {
+              setClosing(e.target.checked);
+              schedule({ closingCheck: e.target.checked });
+            },
+            style: S.check,
+            "aria-label": "\u542F\u7528\u6536\u5C3E\u68C0\u6D4B"
+          }
+        ),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: S.desc, children: closing ? "\u5F00\u542F" : "\u5173\u95ED" })
       ] })
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: S.row, children: [
@@ -3276,7 +3316,10 @@ function EvolutionSettingsSection() {
           {
             type: "checkbox",
             checked: allow,
-            onChange: (e) => setAllow(e.target.checked),
+            onChange: (e) => {
+              setAllow(e.target.checked);
+              schedule({ allowCrossSessionQuery: e.target.checked });
+            },
             style: S.check,
             "aria-label": "\u5141\u8BB8\u8DE8\u56DE\u5408\u67E5\u8BE2"
           }
@@ -3284,11 +3327,8 @@ function EvolutionSettingsSection() {
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: S.desc, children: allow ? "\u5141\u8BB8" : "\u7981\u6B62" })
       ] })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: S.actions, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { type: "button", style: S.button, disabled: busy, onClick: () => void save(), children: busy ? "\u4FDD\u5B58\u4E2D\u2026" : "\u4FDD\u5B58" }),
-      error ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: S.error, role: "alert", children: error }) : status ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: S.status, children: status }) : null
-    ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: S.note, children: "\u601D\u8003\u63D0\u9192\u53EA\u5BF9\u8FDB\u5316\u6A21\u5F0F\u751F\u6548\uFF1B\u5185\u5BB9\u53EF\u9009\u53EA\u8D28\u8BE2\u672C\u5C42\u76EE\u6807\u6216\u5B8C\u6574\u5BF9\u9F50\u680F\u3002\u8DE8\u56DE\u5408\u67E5\u8BE2\u5F00\u5173\u5BF9\u672C\u673A\u5168\u5C40\u751F\u6548\u3002" })
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: S.actions, children: error ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: S.error, role: "alert", children: error }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: S.status, children: status || "\u6539\u52A8\u4F1A\u81EA\u52A8\u4FDD\u5B58" }) }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: S.note, children: "\u6539\u52A8\u5373\u65F6\u843D\u76D8\uFF0C\u4E0D\u7528\u518D\u70B9\u4FDD\u5B58\uFF1B\u601D\u8003\u63D0\u9192\u53EA\u5BF9\u8FDB\u5316\u6A21\u5F0F\u751F\u6548\uFF1B\u5185\u5BB9\u53EF\u9009\u53EA\u5217\u672C\u5C42\u76EE\u6807\u6216\u5B8C\u6574\u5BF9\u9F50\u680F\uFF1B\u6536\u5C3E\u68C0\u6D4B\u5F00\u5173\u53EA\u5F71\u54CD\u56DE\u590D\u7684\u7B2C\u4E09\u5757\uFF1B\u8DE8\u56DE\u5408\u67E5\u8BE2\u5F00\u5173\u5BF9\u672C\u673A\u5168\u5C40\u751F\u6548\u3002" })
   ] });
 }
 var inject = ["slots"];

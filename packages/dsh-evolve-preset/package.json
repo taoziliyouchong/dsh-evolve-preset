@@ -1,6 +1,6 @@
 {
   "name": "dsh-evolve-preset",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "进化模式整套：一个包装下模式本体与全部配套——任务树、画像注入与面板、对齐栏样式、自查工具、计划模式入口。每轮先对齐需求、按规则干活、三块回复收尾。",
   "type": "module",
   "main": "index.js",

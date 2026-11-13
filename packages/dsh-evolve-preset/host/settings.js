@@ -4,7 +4,9 @@
  * 两件事：
  *   1) 设置页读写的 JSON：$DSH_HOME/evolve/evolution-settings.json
  *      { "lateBarSeconds": 40, "lateBarEnabled": true, "lateBarContent": "goal",
- *        "lateBarRetrySeconds": 10, "allowCrossSessionQuery": true }
+ *        "lateBarRetrySeconds": 10, "allowCrossSessionQuery": true,
+ *        "closingCheck": true }
+ *      closingCheck 关掉时：任务树每轮注入一行 [收尾检测：关]，模型据此不做五项、不出第三块。
  *   2) 工具守卫：allowCrossSessionQuery 为 false 时，拒绝跨回合查询三件套。
  *
  * 思考提醒的起始秒数、复查间隔由 host/task-tree.js 读同一份设置，
@@ -36,6 +38,7 @@ const DEFAULTS = {
   lateBarContent: 'goal',
   lateBarRetrySeconds: 10,
   allowCrossSessionQuery: true,
+  closingCheck: true,
 }
 
 /** 关掉跨回合查询时要拒绝的工具。 */
@@ -67,6 +70,7 @@ export function readSettings() {
       lateBarContent: raw && raw.lateBarContent === 'full' ? 'full' : 'goal',
       lateBarRetrySeconds: clampRetrySeconds(raw && raw.lateBarRetrySeconds),
       allowCrossSessionQuery: raw && raw.allowCrossSessionQuery !== false,
+      closingCheck: raw && raw.closingCheck !== false,
     }
   } catch {
     return { ...DEFAULTS }
@@ -253,6 +257,9 @@ async function handleSettings(req, res) {
     allowCrossSessionQuery: body && body.allowCrossSessionQuery !== undefined
       ? body.allowCrossSessionQuery === true
       : current.allowCrossSessionQuery,
+    closingCheck: body && body.closingCheck !== undefined
+      ? body.closingCheck === true
+      : current.closingCheck,
   }
   writeSettings(next)
   sendJson(res, 200, { ok: true, settings: next })

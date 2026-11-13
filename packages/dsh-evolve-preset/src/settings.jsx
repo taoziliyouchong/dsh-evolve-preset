@@ -2,10 +2,10 @@
  * 进化模式设置（浏览器半边源码，随 dsh-evolve-preset 的客户端产物一起发布）
  *
  * 设置页里的「进化模式」一节：思考提醒的起始秒数、复查间隔、内容、开关，
- * 以及跨回合查询开关与上下文压缩插件提醒。
- * 数据走宿主路由 /dsh-evolution-settings/api/settings（GET 读、POST 存）。
+ * 收尾检测开关，以及跨回合查询开关与上下文压缩插件提醒。
+ * 数据走宿主路由 /dsh-evolution-settings/api/settings（GET 读、POST 存）。改动即时落盘。
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 const ROUTE_PREFIX = '/dsh-evolution-settings/api'
 
@@ -91,10 +91,13 @@ export function EvolutionSettingsSection() {
   const [enabled, setEnabled] = useState(true)
   const [content, setContent] = useState('goal')
   const [allow, setAllow] = useState(true)
+  const [closing, setClosing] = useState(true)
   const [billion, setBillion] = useState({ installed: false, enabled: false, dismissed: true })
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState('')
   const [error, setError] = useState(null)
+  const timerRef = useRef(null)
+  const pendingRef = useRef({})
 
   useEffect(() => {
     let alive = true
@@ -108,6 +111,7 @@ export function EvolutionSettingsSection() {
         setEnabled(settings.lateBarEnabled !== false)
         setContent(settings.lateBarContent === 'full' ? 'full' : 'goal')
         setAllow(settings.allowCrossSessionQuery !== false)
+        setClosing(settings.closingCheck !== false)
       } catch (e) {
         if (alive) setError(String((e && e.message) || e))
       }
@@ -120,33 +124,40 @@ export function EvolutionSettingsSection() {
         })
       } catch { /* 没这个接口就不显示横幅 */ }
     })()
-    return () => { alive = false }
+    return () => {
+      alive = false
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
   }, [])
 
-  async function save() {
-    setBusy(true)
+  /** 落盘一批字段：成功后状态行显示已保存，失败显示原因。 */
+  async function persist(patch) {
     setError(null)
-    setStatus('')
     try {
-      const data = await postJson(ROUTE_PREFIX + '/settings', {
-        lateBarSeconds: Number(seconds),
-        lateBarRetrySeconds: Number(retry),
-        lateBarEnabled: enabled === true,
-        lateBarContent: content === 'full' ? 'full' : 'goal',
-        allowCrossSessionQuery: allow === true,
-      })
+      const data = await postJson(ROUTE_PREFIX + '/settings', patch)
       const settings = (data && data.settings) || {}
-      setSeconds(Number(settings.lateBarSeconds) || 40)
-      setRetry(Number(settings.lateBarRetrySeconds) || 10)
       setEnabled(settings.lateBarEnabled !== false)
       setContent(settings.lateBarContent === 'full' ? 'full' : 'goal')
       setAllow(settings.allowCrossSessionQuery !== false)
-      setStatus('已保存；思考提醒从下一轮起生效。')
+      setClosing(settings.closingCheck !== false)
+      setStatus('已保存')
     } catch (e) {
+      setStatus('')
       setError(String((e && e.message) || e))
-    } finally {
-      setBusy(false)
     }
+  }
+
+  /** 改动即存：300ms 内的连续改动合成一次提交，不用再点按钮。 */
+  function schedule(patch) {
+    pendingRef.current = { ...pendingRef.current, ...patch }
+    setBusy(true)
+    setStatus('保存中…')
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => {
+      const body = pendingRef.current
+      pendingRef.current = {}
+      void persist(body).finally(() => setBusy(false))
+    }, 300)
   }
 
   async function dismissBillion() {
@@ -174,7 +185,7 @@ export function EvolutionSettingsSection() {
             <input
               type="checkbox"
               checked={enabled}
-              onChange={(e) => setEnabled(e.target.checked)}
+              onChange={(e) => { setEnabled(e.target.checked); schedule({ lateBarEnabled: e.target.checked }) }}
               style={S.check}
               aria-label="启用思考提醒"
             />
@@ -192,7 +203,7 @@ export function EvolutionSettingsSection() {
               step="1"
               value={seconds}
               disabled={!enabled}
-              onChange={(e) => setSeconds(e.target.value)}
+              onChange={(e) => { setSeconds(e.target.value); schedule({ lateBarSeconds: Number(e.target.value) }) }}
               style={{ ...S.input, opacity: enabled ? 1 : 0.5 }}
               aria-label="思考提醒秒数"
             />
@@ -207,7 +218,7 @@ export function EvolutionSettingsSection() {
               step="1"
               value={retry}
               disabled={!enabled}
-              onChange={(e) => setRetry(e.target.value)}
+              onChange={(e) => { setRetry(e.target.value); schedule({ lateBarRetrySeconds: Number(e.target.value) }) }}
               style={{ ...S.input, width: '64px', opacity: enabled ? 1 : 0.5 }}
               aria-label="质询间隔秒数"
             />
@@ -218,15 +229,32 @@ export function EvolutionSettingsSection() {
             <select
               value={content}
               disabled={!enabled}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={(e) => { setContent(e.target.value); schedule({ lateBarContent: e.target.value }) }}
               style={{ ...S.select, opacity: enabled ? 1 : 0.5 }}
               aria-label="提醒内容"
             >
-              <option value="goal">只报一句状态</option>
+              <option value="goal">只列本层目标</option>
               <option value="full">完整对齐栏</option>
             </select>
           </label>
         </div>
+      </div>
+
+      <div style={S.row}>
+        <div style={S.label}>
+          <div style={S.title}>收尾检测</div>
+          <p style={S.desc}>关掉后每轮不再思考那五项，回复只出对齐栏和正文两块；开回来恢复第三块。</p>
+        </div>
+        <label style={S.control}>
+          <input
+            type="checkbox"
+            checked={closing}
+            onChange={(e) => { setClosing(e.target.checked); schedule({ closingCheck: e.target.checked }) }}
+            style={S.check}
+            aria-label="启用收尾检测"
+          />
+          <span style={S.desc}>{closing ? '开启' : '关闭'}</span>
+        </label>
       </div>
 
       <div style={S.row}>
@@ -238,7 +266,7 @@ export function EvolutionSettingsSection() {
           <input
             type="checkbox"
             checked={allow}
-            onChange={(e) => setAllow(e.target.checked)}
+            onChange={(e) => { setAllow(e.target.checked); schedule({ allowCrossSessionQuery: e.target.checked }) }}
             style={S.check}
             aria-label="允许跨回合查询"
           />
@@ -247,17 +275,12 @@ export function EvolutionSettingsSection() {
       </div>
 
       <div style={S.actions}>
-        <button type="button" style={S.button} disabled={busy} onClick={() => void save()}>
-          {busy ? '保存中…' : '保存'}
-        </button>
         {error
           ? <p style={S.error} role="alert">{error}</p>
-          : status
-            ? <span style={S.status}>{status}</span>
-            : null}
+          : <span style={S.status}>{status || '改动会自动保存'}</span>}
       </div>
 
-      <p style={S.note}>思考提醒只对进化模式生效；内容可选只质询本层目标或完整对齐栏。跨回合查询开关对本机全局生效。</p>
+      <p style={S.note}>改动即时落盘，不用再点保存；思考提醒只对进化模式生效；内容可选只列本层目标或完整对齐栏；收尾检测开关只影响回复的第三块；跨回合查询开关对本机全局生效。</p>
     </div>
   )
 }
