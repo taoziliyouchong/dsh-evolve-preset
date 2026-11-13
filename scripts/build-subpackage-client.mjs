@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // 构建某个分包（或任意带 src/entry.jsx 的目录）的浏览器半边：src/entry.jsx → lib/client.js
 //
-// 用法：node scripts/build-subpackage-client.mjs packages/dsh-chat-density [--check]
+// 用法：node scripts/build-subpackage-client.mjs legacy/dsh-chat-density [--check]
 // 外壳与打包参数同其它面板：window.__ModuleLoader__.load({ id, factory })，
 // react 保持 external（由 DSH 客户端模块表提供）。
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs'

@@ -5,19 +5,19 @@
 //
 // 用法：node scripts/build-preset-client.mjs
 // 前置：任务树 / 画像 / 字号密度三个分包的 lib/client.js 已各自构建好；
-//       设置面板先跑 node packages/dsh-evolve-preset/scripts/build-settings-client.mjs。
+//       设置面板先跑 node scripts/build-settings-client.mjs。
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const repo = dirname(dirname(fileURLToPath(import.meta.url)))
-const out = join(repo, 'packages/dsh-evolve-preset/lib/client.js')
+const out = join(repo, 'lib/client.js')
 
 const parts = [
-  ['任务树面板', 'packages/dsh-evolve-task-tree/lib/client.js'],
-  ['画像面板', 'packages/dsh-profile-panel/lib/client.js'],
-  ['对齐栏与收尾检测的字号密度（含 40 秒草稿的替换）', 'packages/dsh-chat-density/lib/client.js'],
-  ['进化模式设置页', 'packages/dsh-evolve-preset/build/settings-client.js'],
+  ['任务树面板', 'legacy/dsh-evolve-task-tree/lib/client.js'],
+  ['画像面板', 'legacy/dsh-profile-panel/lib/client.js'],
+  ['对齐栏与收尾检测的字号密度（含 40 秒草稿的替换）', 'legacy/dsh-chat-density/lib/client.js'],
+  ['进化模式设置页', 'build/settings-client.js'],
 ]
 
 const HEAD = 'window.__ModuleLoader__.load({\n\tid: "dsh-evolve-preset",\n\tfactory: (require) => {\n\t\tconst __panels = [];\n'

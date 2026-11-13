@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// 按依赖顺序发布 packages/* 到 npm。
+// 按依赖顺序发布 legacy/* 历史包到 npm。
 // 默认只列清单；加 --publish 才真的发。
 // 顺序：依赖别人的包先发，preset 最后（它的 dependencies 指向这些版本）。
 

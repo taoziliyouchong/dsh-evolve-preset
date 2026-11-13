@@ -1,23 +1,65 @@
 {
-  "name": "dsh-evolve",
-  "version": "0.1.0",
-  "private": true,
-  "description": "进化模式整套发布件：一个 agent preset 加它依赖与配套的插件包，monorepo 管理，逐包发布到 npm。",
+  "name": "dsh-evolve-preset",
+  "version": "0.2.3",
+  "description": "进化模式整套：一个包装下模式本体与全部配套——任务树、画像注入与面板、对齐栏样式、自查工具、计划模式入口。每轮先对齐需求、按规则干活、三块回复收尾。",
   "type": "module",
-  "workspaces": [
-    "packages/*"
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "host",
+    "lib/client.js",
+    "cordis.patch.yml",
+    "skills",
+    "assets",
+    "README.md",
+    "README.en.md",
+    "LICENSE"
   ],
-  "scripts": {
-    "smoke": "node scripts/smoke-all.mjs",
-    "publish:all": "node scripts/publish-all.mjs"
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "inject": []
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "dependencies": {
+    "dsh-term-dict": "*"
   },
   "engines": {
-    "node": "^22.19.0 || >=24.0.0"
+    "node": "^22.19.0 || >=24.0.0",
+    "dsh": ">=0.2.1-alpha.1"
   },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "agent-preset",
+    "mode",
+    "persona",
+    "workflow",
+    "task-tree",
+    "profile"
+  ],
   "author": "taoziliyouchong",
   "license": "MIT",
+  "scripts": {
+    "check": "node --check index.js",
+    "build:client": "node scripts/build-settings-client.mjs && node ../../scripts/build-preset-client.mjs",
+    "smoke": "node scripts/smoke.mjs"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/taoziliyouchong/dsh-evolve-preset"
+  },
+  "homepage": "https://github.com/taoziliyouchong/dsh-evolve-preset#readme",
+  "bugs": {
+    "url": "https://github.com/taoziliyouchong/dsh-evolve-preset/issues"
   }
 }

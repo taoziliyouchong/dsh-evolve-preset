@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// 依赖与包结构审查：对 packages/* 逐包查
+// 依赖与包结构审查：对仓库根这一个发布包查
 //   ① package.json 可解析；name/version/engines/files 齐
 //   ② files 每项存在；exports 每个目标存在
 //   ③ 源码里 import 的裸包名都在 dependencies ∪ peerDependencies（node: 与相对路径不算）
@@ -12,7 +12,6 @@ import { join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repo = dirname(dirname(fileURLToPath(import.meta.url)));
-const packagesDir = join(repo, 'packages');
 const fails = [];
 const warns = [];
 
@@ -38,8 +37,8 @@ function bareImports(file) {
   return out;
 }
 
-for (const d of readdirSync(packagesDir)) {
-  const dir = join(packagesDir, d);
+for (const dir of [repo]) {
+  const d = basename(dir);
   if (!statSync(dir).isDirectory()) continue;
   const pjPath = join(dir, 'package.json');
   if (!existsSync(pjPath)) { fails.push(`${d}: 缺 package.json`); continue; }
@@ -75,6 +74,9 @@ for (const d of readdirSync(packagesDir)) {
   for (const n of declared) {
     if (!used.has(n)) warns.push(`${d}: 声明了 ${n}，但源码没 import（可能多余）`);
   }
+  for (const [name, range] of Object.entries(pkg.dependencies || {})) {
+    if (range !== '*') warns.push(`${d}: 依赖 ${name} 写的是 ${range}，默认应为 *（写下限需在变更记录说明依据）`);
+  }
 
   if (pkg.dsh?.bundle?.patch) {
     const rels = Array.isArray(pkg.dsh.bundle.patch) ? pkg.dsh.bundle.patch : [pkg.dsh.bundle.patch];
@@ -95,7 +97,7 @@ for (const d of readdirSync(packagesDir)) {
   }
 }
 
-console.log(`审查 ${readdirSync(packagesDir).length} 个包目录`);
+console.log(`审查 1 个发布包（仓库根）`);
 if (warns.length) {
   console.log(`\n提示 ${warns.length} 条：`);
   for (const w of warns) console.log(`  ! ${w}`);

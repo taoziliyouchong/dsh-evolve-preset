@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// 把一个 profile 接到本仓库的 packages/*：写入 dependencies（link: 本地路径）与 dsh.profile.bundles。
+// 把一个 profile 接到本仓库的 legacy/* 历史包：写入 dependencies（link: 本地路径）与 dsh.profile.bundles。
+// 发布件本身在仓库根，按 npm 安装即可，不需要本脚本。
 // 用法：node scripts/install.mjs --profile desktop
 //       node scripts/install.mjs --profile-dir <DSH_HOME>/profiles/<name>
 // 改前备份 profile/package.json，改完提示重启与 pnpm install。
