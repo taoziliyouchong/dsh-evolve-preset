@@ -2,9 +2,9 @@
 
 [中文](README.md) | **English**
 
-One package, the whole Evolution mode: the preset itself plus the task tree, profile injection and panel, alignment-bar styling, self-check tools, and the plan-mode entry tool. Install this one and you have everything.
+One package, the whole Evolution mode: the preset itself plus the task tree, profile injection and panel, alignment-bar styling, self-check tools, and the plan-mode entry tool.
 
-Evolution mode fixes how the agent frames, does and closes each turn: align on the goal and boundaries first, keep to the rules while working, and reply in three blocks (alignment bar, body, closing check). It does not write code for you; it governs how each turn is thought through, reported and closed.
+Evolution mode is an agent mode for DSH. It leaves model capability alone and changes how the model works each turn: before acting, it pins the job down — what this layer must achieve, which principles to follow, which boundaries are fixed, what is only a direction — and lays it out in four lines in front of you, recorded in the task tree so you can see where the work stands. Then it works to those lines, and every reply comes in three blocks: alignment bar, body, closing check.
 
 ## What this one package contains
 
@@ -19,7 +19,7 @@ Evolution mode fixes how the agent frames, does and closes each turn: align on t
 | Settings page | settings page + host routes | thinking reminder (start seconds / retry interval / content / on-off), closing-check switch, cross-session query switch, compression-plugin notice; stored in `$DSH_HOME/evolve/evolution-settings.json` |
 | Plan-mode entry | tool | `enter_plan_mode`; not registered when the composition has no planMode service |
 
-The term dictionary `dsh-term-dict` is a package dependency (version `*`, which resolves to the latest stable release on npm) and installs with this package; it is a separate plugin with no auto-mount — enable it on the plugin page to use the `dict` tool and vocabulary checks.
+The term dictionary `dsh-term-dict` is a package dependency (requires 0.2.0 or newer) and installs with this package; it is a separate plugin with no auto-mount — enable it on the plugin page to use the `dict` tool and vocabulary checks.
 
 ## Commands
 
@@ -35,8 +35,9 @@ Repeated node edits (`align` / `set` / `move` / `drop`) with no new objective (`
 
 "Settings → 进化模式" contains:
 
-- **Thinking reminder**: start seconds (5–600, default 40), retry interval (5–120, default 10), content (goal line only / full alignment bar, default goal line only), and an on-off switch. When the time comes it hands over the current alignment draft — anything with a goal line goes out, missing items read “none”; the interval only gates retries while no goal line exists yet.
+- **Thinking reminder**: start seconds (5–600, default 40), retry interval (5–120, default 10), content (goal line only / full alignment bar, default goal line only), and an on-off switch. When the time comes it hands over the current alignment draft — in goal-line mode it goes out even before a goal is written, reading “(not written yet)”; the full alignment bar still needs a goal, with missing items reading “none”.
 - **Closing check**: when off, replies carry only the alignment bar and body; the five checks are skipped and the third block does not appear. Turning it back on restores the block.
+- **Rendering of the alignment bar and closing check**: when off, neither block reaches the reply — the plugin strips them in the render layer, so both the client and the session archive keep the body only; the thinking reminder no longer inserts an alignment draft.
 - **Cross-session query**: when off, the session search / dump / recover tools are refused.
 - **Compression-plugin notice**: shows once on load (plus a banner on the settings page) when `billion-context` is installed and running.
 
@@ -52,7 +53,7 @@ dsh plugin --profile desktop add dsh-evolve-preset
 
 Restart DSH, then pick "进化模式" in Settings → Modes.
 
-Requires DSH >= 0.2.1-alpha.1 (same as `engines.dsh`).
+Requires DSH >= 0.2.1-alpha.4 (same as `engines.dsh`): the preset composition references `dsh-plugin-market/tools`, available from 0.2.1-alpha.4.
 
 From the repository instead of npm:
 

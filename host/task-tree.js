@@ -28,6 +28,7 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { zstdDecompressSync } from 'node:zlib'
 import { readSettings } from './settings.js'
+import { filterBarStream } from './render-filter.js'
 
 /** Cordis 插件名。 */
 export const name = 'dsh-evolve-task-tree'
@@ -971,6 +972,15 @@ function closingCheckEnabled() {
 }
 
 /**
+ * 渲染开关「对齐栏与收尾检测的渲染」：设置页写 renderBars，默认开。
+ * 关掉时执行点在这条模型输出流上：filterBarStream 把模型写出的两块剥掉——
+ * 客户端看到的、落盘进会话档的都只剩正文。开关不靠模型自觉，也不改提示注入。
+ */
+function renderBarsEnabled() {
+  return readSettings().renderBars !== false
+}
+
+/**
  * 这一层四样还缺哪几项：空着就是缺；四样齐了才发 40 秒质询。
  * 「无」是写明的「一项都没有」，算写齐（捕获回路会原样保留它）。
  */
@@ -985,20 +995,22 @@ function alignGaps(align) {
 }
 
 /**
- * 40 秒初稿插入（2026-11-13 口径）：到点就把当前这一版对齐栏初稿交出去——
- * 只要有本层目标就发，缺的项照实写「无」，不再等四样齐。
- * 连本层目标都还没写出来才返回空串，由 lateBarStream 隔「复查间隔」再看一次。
+ * 40 秒初稿插入（2026-11-14 口径）：到点就把当前这一版对齐栏初稿交出去——
+ * 只列本层目标时，目标还没写出来也发，写「（还没写出来）」；完整对齐栏仍要求有目标。
+ * 连树都没有才返回空串，由 lateBarStream 隔「复查间隔」再看一次。
  */
 function draftAlignText(sessionId, elapsedSec) {
   const rec = loadTree(sessionId)
-  const align = rec ? alignOf(rec) : null
+  if (!rec) return ''
+  const align = alignOf(rec)
   const goal = String((align && align.goal) || '').trim()
-  if (!rec || !goal) return ''
   const sec = Number.isFinite(elapsedSec) ? Math.round(elapsedSec) : lateBarSeconds()
   if (lateBarContent() === 'goal') {
-    // 只显示目标时，插进来的就只有对齐栏初稿那一行，不加提示语。
-    return '> **本层目标**：' + goal + '\\\n\n'
+    // 只显示目标时，插进来的就只有对齐栏初稿那一行，不加提示语；
+    // 目标还没写出来也发（2026-11-14 用户要求），写「（还没写出来）」，让人知道质询在工作。
+    return '> **本层目标**：' + (goal || '（还没写出来）') + '\\\n\n'
   }
+  if (!goal) return ''
   const block = renderAlignBlock(rec, null, align)
   // 与正式回复的对齐栏同款：引用块 + 行末反斜杠。
   // 纯文本单换行会被 Markdown 当软换行拼成一行（实测），必须靠引用块与硬换行保住分行。
@@ -1021,6 +1033,8 @@ function draftAlignText(sessionId, elapsedSec) {
 function armLateBar(sessionId, turn) {
   if (!sessionId || !Number.isSafeInteger(turn)) return
   if (!lateBarEnabled()) return
+  // 对齐栏与收尾检测关掉时，草稿本身也是对齐栏，不挂（否则关掉的那一块又从草稿里冒出来）。
+  if (!renderBarsEnabled()) return
   const current = lateBarArms.get(sessionId)
   if (current && current.turn === turn && !current.done) return
   if (presetMarkerOf(sessionId) === 'other') return
@@ -1118,16 +1132,20 @@ function installLateBar(ctx) {
       const purpose = options && options.purpose
       const sid = options && options.sessionId ? String(options.sessionId) : ''
       if (!sid || purpose) return next()
-      if (!lateBarEnabled()) return next()
+      const source = next()
+      // 「对齐栏与收尾检测」关掉＝在这一层把两块剥掉；只认本模式，别的模式一个字节都不动。
+      const barsOff = !renderBarsEnabled() && presetMarkerOf(sid) === ALIGN_PRESET
+      const stream = barsOff ? filterBarStream(source) : source
+      if (barsOff || !lateBarEnabled()) return stream
       const arm = lateBarArms.get(sid)
-      if (!arm || arm.fired || arm.done) return next()
+      if (!arm || arm.fired || arm.done) return stream
       if (Date.now() - arm.at > LATE_BAR_ARM_TTL) {
         lateBarArms.delete(sid)
-        return next()
+        return stream
       }
       // 不在这里取内容：到点后由 lateBarStream 现读树里的草稿；没草稿就等下一个检查点。
       const dueIn = arm.at + lateBarSeconds() * 1000 - Date.now()
-      return lateBarStream(next(), sid, dueIn, arm.at, () => { arm.fired = true })
+      return lateBarStream(stream, sid, dueIn, arm.at, () => { arm.fired = true })
     })
   } catch {
     /* 挂不上：功能不生效，不影响树的其余部分 */

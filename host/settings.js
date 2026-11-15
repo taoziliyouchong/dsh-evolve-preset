@@ -5,8 +5,10 @@
  *   1) 设置页读写的 JSON：$DSH_HOME/evolve/evolution-settings.json
  *      { "lateBarSeconds": 40, "lateBarEnabled": true, "lateBarContent": "goal",
  *        "lateBarRetrySeconds": 10, "allowCrossSessionQuery": true,
- *        "closingCheck": true }
+ *        "closingCheck": true, "renderBars": true }
  *      closingCheck 关掉时：任务树每轮注入一行 [收尾检测：关]，模型据此不做五项、不出第三块。
+ *      renderBars 关掉时：任务树在 llm/stream 这一层把「对齐栏」与「收尾检测」两块剥掉，
+ *      客户端与落盘都只剩正文；两者默认都开，互不替代。
  *   2) 工具守卫：allowCrossSessionQuery 为 false 时，拒绝跨回合查询三件套。
  *
  * 思考提醒的起始秒数、复查间隔由 host/task-tree.js 读同一份设置，
@@ -39,6 +41,7 @@ const DEFAULTS = {
   lateBarRetrySeconds: 10,
   allowCrossSessionQuery: true,
   closingCheck: true,
+  renderBars: true,
 }
 
 /** 关掉跨回合查询时要拒绝的工具。 */
@@ -71,6 +74,9 @@ export function readSettings() {
       lateBarRetrySeconds: clampRetrySeconds(raw && raw.lateBarRetrySeconds),
       allowCrossSessionQuery: raw && raw.allowCrossSessionQuery !== false,
       closingCheck: raw && raw.closingCheck !== false,
+      renderBars: raw && raw.renderBars !== undefined
+        ? raw.renderBars === true
+        : (raw ? raw.closingCheck !== false : true),
     }
   } catch {
     return { ...DEFAULTS }
@@ -260,6 +266,9 @@ async function handleSettings(req, res) {
     closingCheck: body && body.closingCheck !== undefined
       ? body.closingCheck === true
       : current.closingCheck,
+    renderBars: body && body.renderBars !== undefined
+      ? body.renderBars === true
+      : current.renderBars,
   }
   writeSettings(next)
   sendJson(res, 200, { ok: true, settings: next })

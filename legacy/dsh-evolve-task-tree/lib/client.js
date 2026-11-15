@@ -852,7 +852,7 @@ function TaskTreeTab(props) {
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { type: "button", className: "ztt-textbtn", onClick: refresh, children: "\u91CD\u8BD5" }) })
     ] });
   }
-  if (state.mode !== "" && state.mode !== "plugin-evolution") {
+  if (state.mode !== "" && state.mode !== "evolve") {
     return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "ztt-root", children: [
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "ztt-note", children: "\u672C\u4F1A\u8BDD\u4E0D\u662F\u8FDB\u5316\u6A21\u5F0F\uFF1A\u4EFB\u52A1\u6811\u4E0E\u5BF9\u9F50\u680F\u53EA\u5728\u8FDB\u5316\u6A21\u5F0F\u91CC\u7528\u3002" }),
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { type: "button", className: "ztt-textbtn", onClick: refresh, children: "\u5237\u65B0" }) })

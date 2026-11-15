@@ -1,7 +1,7 @@
 {
   "name": "dsh-evolve-preset",
-  "version": "0.2.3",
-  "description": "进化模式整套：一个包装下模式本体与全部配套——任务树、画像注入与面板、对齐栏样式、自查工具、计划模式入口。每轮先对齐需求、按规则干活、三块回复收尾。",
+  "version": "0.2.4",
+  "description": "进化模式：DSH 的 agent 模式。模型每轮先对齐目标与边界再动手，回复固定对齐栏、正文、收尾检测三块；任务树、画像注入与面板、自查工具、计划模式入口一个包装齐。",
   "type": "module",
   "main": "index.js",
   "exports": {
@@ -30,11 +30,11 @@
     }
   },
   "dependencies": {
-    "dsh-term-dict": "*"
+    "dsh-term-dict": ">=0.2.0"
   },
   "engines": {
     "node": "^22.19.0 || >=24.0.0",
-    "dsh": ">=0.2.1-alpha.1"
+    "dsh": ">=0.2.1-alpha.4"
   },
   "keywords": [
     "deepseek-harness",
@@ -51,7 +51,7 @@
   "license": "MIT",
   "scripts": {
     "check": "node --check index.js",
-    "build:client": "node scripts/build-settings-client.mjs && node ../../scripts/build-preset-client.mjs",
+    "build:client": "node scripts/build-settings-client.mjs && node scripts/build-preset-client.mjs",
     "smoke": "node scripts/smoke.mjs"
   },
   "repository": {

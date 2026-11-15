@@ -971,7 +971,7 @@ export function TaskTreeTab(props) {
     )
   }
   // 任务树与对齐栏只属于进化模式：标准等模式里不画树、不画对齐卡（后端也不写）。
-  if (state.mode !== '' && state.mode !== 'plugin-evolution') {
+  if (state.mode !== '' && state.mode !== 'evolve') {
     return (
       <div className="ztt-root">
         <p className="ztt-note">本会话不是进化模式：任务树与对齐栏只在进化模式里用。</p>

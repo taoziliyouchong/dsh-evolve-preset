@@ -92,6 +92,7 @@ export function EvolutionSettingsSection() {
   const [content, setContent] = useState('goal')
   const [allow, setAllow] = useState(true)
   const [closing, setClosing] = useState(true)
+  const [bars, setBars] = useState(true)
   const [billion, setBillion] = useState({ installed: false, enabled: false, dismissed: true })
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState('')
@@ -112,6 +113,7 @@ export function EvolutionSettingsSection() {
         setContent(settings.lateBarContent === 'full' ? 'full' : 'goal')
         setAllow(settings.allowCrossSessionQuery !== false)
         setClosing(settings.closingCheck !== false)
+        setBars(settings.renderBars !== false)
       } catch (e) {
         if (alive) setError(String((e && e.message) || e))
       }
@@ -140,6 +142,7 @@ export function EvolutionSettingsSection() {
       setContent(settings.lateBarContent === 'full' ? 'full' : 'goal')
       setAllow(settings.allowCrossSessionQuery !== false)
       setClosing(settings.closingCheck !== false)
+      setBars(settings.renderBars !== false)
       setStatus('已保存')
     } catch (e) {
       setStatus('')
@@ -259,6 +262,23 @@ export function EvolutionSettingsSection() {
 
       <div style={S.row}>
         <div style={S.label}>
+          <div style={S.title}>对齐栏与收尾检测的渲染</div>
+          <p style={S.desc}>一个开关管两块：关掉后回复里看不到对齐栏与收尾检测——插件在渲染层把模型写出的这两块剥掉，客户端与落盘都只剩正文；思考提醒也不再插对齐栏初稿。</p>
+        </div>
+        <label style={S.control}>
+          <input
+            type="checkbox"
+            checked={bars}
+            onChange={(e) => { setBars(e.target.checked); schedule({ renderBars: e.target.checked }) }}
+            style={S.check}
+            aria-label="渲染对齐栏与收尾检测"
+          />
+          <span style={S.desc}>{bars ? '显示' : '不显示'}</span>
+        </label>
+      </div>
+
+      <div style={S.row}>
+        <div style={S.label}>
           <div style={S.title}>跨回合查询</div>
           <p style={S.desc}>关闭后，会话检索、导出、恢复三件工具都不可调用。</p>
         </div>
@@ -280,7 +300,7 @@ export function EvolutionSettingsSection() {
           : <span style={S.status}>{status || '改动会自动保存'}</span>}
       </div>
 
-      <p style={S.note}>改动即时落盘，不用再点保存；思考提醒只对进化模式生效；内容可选只列本层目标或完整对齐栏；收尾检测开关只影响回复的第三块；跨回合查询开关对本机全局生效。</p>
+      <p style={S.note}>改动即时落盘，不用再点保存；思考提醒只对进化模式生效；内容可选只列本层目标或完整对齐栏；收尾检测开关只影响回复的第三块；渲染开关在渲染层把两块剥掉，客户端与落盘都只剩正文；跨回合查询开关对本机全局生效。</p>
     </div>
   )
 }

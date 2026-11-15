@@ -21,7 +21,7 @@ npm pack --dry-run --workspace packages/dsh-evolve-preset
 npm publish --access public --workspace packages/dsh-evolve-preset
 ```
 
-`dsh-term-dict` 是它的依赖（版本写 `*`），npm 上已有稳定版即可。
+`dsh-term-dict` 是它的依赖（要求 0.2.0 及以上），npm 上已有稳定版即可。
 
 打 tag：`git tag v0.2.0 && git push && git push --tags`。
 

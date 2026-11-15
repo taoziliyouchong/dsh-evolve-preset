@@ -33,8 +33,9 @@ if (pkg) {
   if (pkg.files?.includes('skills')) ok('files 含 cordis.patch.yml 与 skills');
   if (pkg.engines?.dsh) ok(`engines.dsh = ${pkg.engines.dsh}`);
   else bad('engines.dsh 缺失');
-  if (pkg.dependencies?.['dsh-term-dict'] === '*') ok('依赖 dsh-term-dict = *');
-  else bad('dsh-term-dict 依赖缺失或不是 *');
+  const dictDep = pkg.dependencies?.['dsh-term-dict'];
+  if (typeof dictDep === 'string' && /^>=0\.2\./.test(dictDep)) ok(`依赖 dsh-term-dict = ${dictDep}`);
+  else bad('dsh-term-dict 依赖缺失或不是 >=0.2.x');
 
   if (pkg.main === 'index.js') ok('main = index.js');
   else bad(`main 应为 index.js，实际 ${pkg.main}`);

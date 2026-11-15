@@ -3,10 +3,11 @@
  * 作用：两条工具跑完净版校验与画像体检，命中与退出码直接给结论。
  *   - net-clean-check：净版交付物扫「项目推进过程」痕迹词，命中列出文件:行号。
  *   - profile-lint：$DSH_HOME 下画像文件体检（加粗/引用块/行首缩进/跨层重复）。
+ *   - gate-check：关卡勾稽校验（7 节，每节一条 EVID 指针）。
  * 脚本本体在包内 assets/（随包发布，不引用外部目录）。
  */
 
-import { existsSync } from 'node:fs'
+import { existsSync, rmSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -22,6 +23,8 @@ const ASSETS = join(dirname(fileURLToPath(import.meta.url)), '..', 'assets')
 const NET_CLEAN = join(ASSETS, 'net-clean-check.mjs')
 const PROFILE_LINT = join(ASSETS, 'profile-lint.mjs')
 const GATE_CHECK = join(ASSETS, 'gate-check.mjs')
+/** 关卡文档目录（与 gate-check.mjs 的 GATE_DIR 同一口径）。 */
+const GATE_DIR = join(process.env.DSH_HOME || join(homedir(), '.dsh'), 'gate')
 const TIMEOUT_MS = 60000
 
 /** pwsh 单引号安全引用（命令按 `& <exe> <args>` 语法拼）。 */
@@ -136,10 +139,28 @@ export function apply(ctx) {
       if (args.init === true) return await runScript(ctx, GATE_CHECK, ['--init', '--session', sid], exec)
       const file = typeof args.file === 'string' && args.file.trim()
         ? args.file.trim()
-        : join(process.env.DSH_HOME || join(homedir(), '.dsh'), 'gate', sid + '.md')
+        : join(GATE_DIR, sid + '.md')
       if (!existsSync(file)) throw new Error('模板不存在：' + file + '（先 init=true 生成）')
-      const argv = ['--file', file, '--session', sid]
-      return await runScript(ctx, GATE_CHECK, argv, exec)
+      return await runScript(ctx, GATE_CHECK, ['--file', file, '--session', sid], exec)
     },
   }))
+
+  // 关卡文档按轮清：用户发下一条提示词＝新回合的第一步——把上一轮的 <会话id>.md 自动删掉，
+  // 免得旧关卡混进这一轮；这一轮要用时重新 init。只在新回合开头清，不在回合中途清。
+  try {
+    const lastTurn = new Map()
+    ctx.on('agent/pre-step', ({ agent, turn }, next) => {
+      try {
+        const sid = agent && agent.session && agent.session.id
+        if (sid && Number.isSafeInteger(turn) && lastTurn.get(sid) !== turn) {
+          lastTurn.set(sid, turn)
+          for (const ext of ['.md', '.log']) {
+            const file = join(GATE_DIR, String(sid) + ext)
+            if (existsSync(file)) rmSync(file, { force: true })
+          }
+        }
+      } catch { /* 清理失败不拦主流程 */ }
+      return next()
+    })
+  } catch { /* 没有 pre-step 事件就不清 */ }
 }
