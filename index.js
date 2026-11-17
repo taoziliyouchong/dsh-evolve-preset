@@ -7,6 +7,7 @@
  * 单块挂载失败不拖垮整包：捕获后打一行警告，其余照常挂上。
  */
 
+import * as basicTerms from './host/basic-terms.js'
 import * as taskTree from './host/task-tree.js'
 import * as profileInject from './host/profile-inject.js'
 import * as profilePanel from './host/profile-panel.js'
@@ -23,6 +24,7 @@ export const inject = ['tools', 'commands', 'shell', 'sandboxPolicy']
 
 /** 挂载顺序固定；plan-enter 内部自己判 planMode 在不在。 */
 const MODULES = [
+  ['basic-terms', basicTerms],
   ['settings', settings],
   ['task-tree', taskTree],
   ['profile-inject', profileInject],

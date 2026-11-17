@@ -1,14 +1,14 @@
 /**
- * 渲染层剥块（设置页开关「对齐栏与收尾检测的渲染」关掉时用）。
+ * 渲染层降级（设置页开关「对齐栏与收尾检测的渲染」关掉时用）。
  *
- * 开关关掉时，模型仍按模式正文写对齐栏与收尾检测，但这两块不进回复——在 `llm/stream`
- * 这一层把文本剥掉：客户端看到的、落盘进会话档的（assistant/chunk 与 block-end 的内容）
- * 都只剩正文。开关执行点在渲染层，不靠模型自觉。
+ * 开关关掉时，模型仍按模式正文写对齐栏与收尾检测，但这两块不再以「块」出现：
+ * 在 `llm/stream` 这一层把引用块与行内加粗去掉，内容按普通段落留在正文里——
+ * 客户端看到的、落盘进会话档的都只是普通文字，内容一个字不丢。开关执行点在渲染层，不靠模型自觉。
  *
  * 只认块头，不认内容：
- *   · 开头：`> **本层目标**：…` 起的引用块，连它后面的空行与 `---` 一起丢掉；
- *   · 末尾：`> **收尾检测**` 起的引用块，连它前面的 `---` 一起丢掉。
- * 其余文本原样放行；reasoning / tool-call / usage / finish 等 chunk 不动。
+ *   · 开头：`> **本层目标**：…` 起的引用块——逐行去 `>` 与 `**`，每行独立成段；
+ *   · 末尾：`> **收尾检测**` 起的引用块——同样处理；
+ *   · 其余文本原样放行；reasoning / tool-call / usage / finish 等 chunk 不动。
  */
 
 const BAR_HEAD = /^\s*>\s*\*\*本层目标\*\*/
@@ -17,16 +17,32 @@ const SEPARATOR = /^\s*---\s*$/
 const BLANK = /^\s*$/
 
 /**
- * 逐行过滤器：一段一段吃文本，返回该发出去的部分。
+ * 把一行对齐栏／收尾检测降级成普通正文行：去引用块前缀、去行内加粗、去行尾硬换行。
+ * 每行后面跟一个空行——普通段落里的单换行会被渲染器拼成一行，空行保证分行。
+ * @param {string} line 原始行（可带换行）
+ * @returns {string} 要发出去的文本；空串表示这行不用输出（空行）
+ */
+function demoteLine(line) {
+  const raw = String(line || '').replace(/\r?\n$/, '')
+  if (BLANK.test(raw)) return ''
+  const text = raw
+    .replace(/^\s*>\s?/, '')
+    .replace(/\*\*/g, '')
+    .replace(/\\\s*$/, '')
+    .trimEnd()
+  if (!text) return ''
+  return text + '\n\n'
+}
+
+/**
+ * 逐行降级器：一段一段吃文本，返回该发出去的部分。
  * 一次模型调用一个实例（lead 只在这次调用的第一块文本上判）。
  */
 export class BarFilter {
   constructor() {
-    /** lead（开头未定）→ postbar（刚丢掉对齐栏，正在扫尾随空行/分隔线）→ body → drop（正在丢收尾块） */
+    /** lead（开头未定）→ demote（对齐栏降级中）→ body → close（收尾块降级中） */
     this.phase = 'lead'
     this.line = ''
-    this.held = ''
-    this.blank = ''
     this.inputs = new Map()
     this.outputs = new Map()
   }
@@ -52,7 +68,7 @@ export class BarFilter {
     return out
   }
 
-  /** 文本块结束：flush 最后一行与扣住的分隔线，返回还要补发的文本。 */
+  /** 文本块结束：flush 最后一行，返回还要补发的文本。 */
   endBlock(index) {
     let out = ''
     if (this.line) {
@@ -60,67 +76,46 @@ export class BarFilter {
       this.line = ''
       out += this.consume(line)
     }
-    if (this.phase !== 'drop' && this.held) {
-      out += this.held
-      this.held = ''
-    }
-    if (this.phase !== 'drop' && this.blank) {
-      out += this.blank
-      this.blank = ''
-    }
     if (out) this.outputs.set(index, (this.outputs.get(index) || '') + out)
     return out
   }
 
   consume(line) {
-    if (this.phase === 'drop') return ''
     if (this.phase === 'lead') {
       if (BLANK.test(line)) return ''
-      if (BAR_HEAD.test(line)) { this.phase = 'postbar'; return '' }
+      if (BAR_HEAD.test(line)) {
+        this.phase = 'demote'
+        return demoteLine(line)
+      }
       this.phase = 'body'
       return this.bodyLine(line)
     }
-    if (this.phase === 'postbar') {
-      // 对齐栏是多行引用块：块头之后的 `>` 行都还算栏内，直到出现正文行。
-      if (/^\s*>/.test(line)) return ''
-      if (BLANK.test(line) || SEPARATOR.test(line)) return ''
+    if (this.phase === 'demote') {
+      if (BLANK.test(line)) return ''
+      if (SEPARATOR.test(line)) return '---\n\n'
+      if (/^\s*>/.test(line)) return demoteLine(line)
       this.phase = 'body'
       return this.bodyLine(line)
+    }
+    if (this.phase === 'close') {
+      if (BLANK.test(line)) return ''
+      if (SEPARATOR.test(line)) return '---\n\n'
+      return demoteLine(line)
     }
     return this.bodyLine(line)
   }
 
   bodyLine(line) {
     if (CLOSE_HEAD.test(line)) {
-      // 收尾块整个丢掉，连它前面扣住的空行与分隔线一起。
-      this.phase = 'drop'
-      this.held = ''
-      this.blank = ''
-      return ''
+      this.phase = 'close'
+      return demoteLine(line)
     }
-    if (this.held) {
-      if (BLANK.test(line)) { this.held += line; return '' }
-      const held = this.held
-      this.held = ''
-      return held + line
-    }
-    if (SEPARATOR.test(line)) {
-      this.held = this.blank + line
-      this.blank = ''
-      return ''
-    }
-    if (BLANK.test(line)) {
-      this.blank += line
-      return ''
-    }
-    const blank = this.blank
-    this.blank = ''
-    return blank + line
+    return line
   }
 }
 
 /**
- * 包住一条模型输出流：text-delta 与 text 类型 block-end 的内容换成剥完的文本，
+ * 包住一条模型输出流：text-delta 与 text 类型 block-end 的内容换成降级后的文本，
  * 其余 chunk 原样放行。block-end 是组装消息的权威内容，必须一起改。
  * @param {AsyncIterable<any>} source 模型原始输出流
  */

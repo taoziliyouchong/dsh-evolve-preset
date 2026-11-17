@@ -1,4 +1,4 @@
-# dsh-evolve-preset
+﻿# dsh-evolve-preset
 
 [中文](README.md) | **English**
 
@@ -18,8 +18,9 @@ Evolution mode is an agent mode for DSH. It leaves model capability alone and ch
 | Self-check tools | tools | `net-clean-check`, `profile-lint`, `gate-check` |
 | Settings page | settings page + host routes | thinking reminder (start seconds / retry interval / content / on-off), closing-check switch, cross-session query switch, compression-plugin notice; stored in `$DSH_HOME/evolve/evolution-settings.json` |
 | Plan-mode entry | tool | `enter_plan_mode`; not registered when the composition has no planMode service |
+| Basic terms | host hook | once the dictionary's general layer exists, fills in the evolution-mode term set; adds only missing entries, never overwrites or deletes |
 
-The term dictionary `dsh-term-dict` is a package dependency (requires 0.2.0 or newer) and installs with this package; it is a separate plugin with no auto-mount — enable it on the plugin page to use the `dict` tool and vocabulary checks.
+The term dictionary `dsh-term-dict` is a package dependency (requires 0.2.0 or newer) and installs with this package; it is a separate plugin with no auto-mount — enable it on the plugin page to use the `dict` tool and vocabulary checks. Once enabled, every start of this package fills in the evolution-mode terms the general layer is still missing (`assets/basic-terms.md`, 16 entries); existing entries are left untouched and `general.md.bak` is kept. If the dictionary does not exist yet nothing is written — the first build belongs to `dsh-term-dict`.
 
 ## Commands
 
@@ -37,7 +38,7 @@ Repeated node edits (`align` / `set` / `move` / `drop`) with no new objective (`
 
 - **Thinking reminder**: start seconds (5–600, default 40), retry interval (5–120, default 10), content (goal line only / full alignment bar, default goal line only), and an on-off switch. When the time comes it hands over the current alignment draft — in goal-line mode it goes out even before a goal is written, reading “(not written yet)”; the full alignment bar still needs a goal, with missing items reading “none”.
 - **Closing check**: when off, replies carry only the alignment bar and body; the five checks are skipped and the third block does not appear. Turning it back on restores the block.
-- **Rendering of the alignment bar and closing check**: when off, neither block reaches the reply — the plugin strips them in the render layer, so both the client and the session archive keep the body only; the thinking reminder no longer inserts an alignment draft.
+- **Rendering of the alignment bar and closing check**: when off, neither block stays a block — the plugin drops the quote block and bold run-in labels in the render layer, so the content shows up as ordinary body text in both the client and the session archive, nothing lost; the thinking reminder no longer inserts an alignment draft.
 - **Cross-session query**: when off, the session search / dump / recover tools are refused.
 - **Compression-plugin notice**: shows once on load (plus a banner on the settings page) when `billion-context` is installed and running.
 
@@ -76,12 +77,12 @@ Keep `dsh-term-dict`: it is a dependency, not a duplicate.
 
 ## Layout
 
-- `index.js` — host entry: one apply mounts the six capabilities under `host/`; a failing module does not take the package down
-- `host/` — host implementations (task-tree, profile-inject, profile-panel, chat-density, check, plan-enter)
+- `index.js` — host entry: one apply mounts the seven capabilities under `host/`; a failing module does not take the package down
+- `host/` — host implementations (basic-terms, task-tree, profile-inject, profile-panel, chat-density, check, plan-enter)
 - `lib/client.js` — browser half: one entry hosting three UIs
 - `cordis.patch.yml` — preset declaration, composition rows, this package's host row
 - `skills/` — `evolve-maintenance` and `task-tree-workflow`
-- `assets/` — the three self-check scripts
+- `assets/` — the three self-check scripts plus the basic term set `basic-terms.md`
 
 ## Known limits
 
@@ -97,3 +98,4 @@ Open an issue: https://github.com/taoziliyouchong/dsh-evolve-preset/issues
 ## License
 
 MIT
+

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 进化模式设置（浏览器半边源码，随 dsh-evolve-preset 的客户端产物一起发布）
  *
  * 设置页里的「进化模式」一节：思考提醒的起始秒数、复查间隔、内容、开关，
@@ -263,7 +263,7 @@ export function EvolutionSettingsSection() {
       <div style={S.row}>
         <div style={S.label}>
           <div style={S.title}>对齐栏与收尾检测的渲染</div>
-          <p style={S.desc}>一个开关管两块：关掉后回复里看不到对齐栏与收尾检测——插件在渲染层把模型写出的这两块剥掉，客户端与落盘都只剩正文；思考提醒也不再插对齐栏初稿。</p>
+          <p style={S.desc}>一个开关管两块：关掉后这两块不再做成引用块（去引用块、去行名加粗），内容以普通正文留在回复里——客户端看到的、落盘进会话档的都只是普通文字，一个字不丢；思考提醒也不再插对齐栏初稿。</p>
         </div>
         <label style={S.control}>
           <input
@@ -300,7 +300,7 @@ export function EvolutionSettingsSection() {
           : <span style={S.status}>{status || '改动会自动保存'}</span>}
       </div>
 
-      <p style={S.note}>改动即时落盘，不用再点保存；思考提醒只对进化模式生效；内容可选只列本层目标或完整对齐栏；收尾检测开关只影响回复的第三块；渲染开关在渲染层把两块剥掉，客户端与落盘都只剩正文；跨回合查询开关对本机全局生效。</p>
+      <p style={S.note}>改动即时落盘，不用再点保存；思考提醒只对进化模式生效；内容可选只列本层目标或完整对齐栏；收尾检测开关只影响回复的第三块；渲染开关在渲染层把两块降级成普通正文，内容保留；跨回合查询开关对本机全局生效。</p>
     </div>
   )
 }
@@ -320,3 +320,5 @@ export function apply(ctx) {
     label: '进化模式',
   }, EvolutionSettingsSection))
 }
+
+

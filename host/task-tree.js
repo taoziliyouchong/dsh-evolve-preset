@@ -1006,9 +1006,10 @@ function draftAlignText(sessionId, elapsedSec) {
   const goal = String((align && align.goal) || '').trim()
   const sec = Number.isFinite(elapsedSec) ? Math.round(elapsedSec) : lateBarSeconds()
   if (lateBarContent() === 'goal') {
-    // 只显示目标时，插进来的就只有对齐栏初稿那一行，不加提示语；
-    // 目标还没写出来也发（2026-11-14 用户要求），写「（还没写出来）」，让人知道质询在工作。
-    return '> **本层目标**：' + (goal || '（还没写出来）') + '\\\n\n'
+    // goal 模式也带「思考超过 · 自动插入」字样——客户端按这两个词认草稿卡（installLateBarPaint）；
+    // 不带就被当成正式对齐栏压小压淡，正文里等于看不见。目标还没写出来也发，写「（还没写出来）」。
+    return '> ⏳ 思考超过 ' + sec + ' 秒 · 自动插入 · 本层目标初稿（正文随后）\\\n'
+      + '> **本层目标**：' + (goal || '（还没写出来）') + '\\\n\n'
   }
   if (!goal) return ''
   const block = renderAlignBlock(rec, null, align)
@@ -1128,6 +1129,9 @@ async function* lateBarStream(source, sessionId, dueIn, startedAt, onInject, ret
 /** 挂上一个会话的「思考提醒」；返回摘除函数（宿主事件注册用）。 */
 function installLateBar(ctx) {
   try {
+    // 2026-11-17：llm/stream 必须 global——它的 thisArg 是 LlmRuntime 服务实例，
+    // Cordis dispatch 会按服务 isolate 过滤候选监听器；宿主层插件 ctx 与 llm 服务不同域，
+    // 不加 global 一个事件都收不到（官方 session-title 同样带 global）。
     ctx.on('llm/stream', (options, next) => {
       const purpose = options && options.purpose
       const sid = options && options.sessionId ? String(options.sessionId) : ''
@@ -1146,13 +1150,14 @@ function installLateBar(ctx) {
       // 不在这里取内容：到点后由 lateBarStream 现读树里的草稿；没草稿就等下一个检查点。
       const dueIn = arm.at + lateBarSeconds() * 1000 - Date.now()
       return lateBarStream(stream, sid, dueIn, arm.at, () => { arm.fired = true })
-    })
+    }, { global: true, prepend: true })
   } catch {
     /* 挂不上：功能不生效，不影响树的其余部分 */
   }
   // 一轮只挂一次：pre-step 每个 step 都会触发，按步挂会让同一轮注入多次。
   // 改成轮边界：turn/start 挂、turn/end 清。
   try {
+    // 2026-11-17：session/event 同样按 global 收——它从会话域发出，宿主层 ctx 默认不在候选里。
     ctx.on('session/event', (session, event) => {
       const sid = session && session.id ? String(session.id) : ''
       if (!sid || !event || typeof event.type !== 'string') return
@@ -1162,7 +1167,7 @@ function installLateBar(ctx) {
       } else if (event.type === 'turn/end') {
         lateBarArms.delete(sid)
       }
-    })
+    }, { global: true })
   } catch {
     /* 没有会话事件：退回每步检查（llm/stream 里仍会判 fired） */
   }

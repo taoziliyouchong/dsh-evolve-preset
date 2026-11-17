@@ -1,4 +1,4 @@
-# 发布清单（合包版）
+﻿# 发布清单（合包版）
 
 本目录是 `dsh-evolve-preset` 仓库里**唯一发布的包**。0.2.0 起，任务树、画像注入与面板、对齐栏样式、自查工具、计划模式入口都并进了这个包，不再逐包发布。
 
@@ -9,9 +9,9 @@ node packages/dsh-evolve-preset/scripts/smoke.mjs
 npm pack --dry-run --workspace packages/dsh-evolve-preset
 ```
 
-冒烟查：`package.json`（main/exports/dsh.client/files）、组合行含本包宿主行 `dsh-evolve-preset` 且不含外部插件名、`host/` 六个模块、客户端外壳 id、`assets/` 三个脚本、技能 frontmatter、私有痕迹、`.bak` 残留。
+冒烟查：`package.json`（main/exports/dsh.client/files）、组合行含本包宿主行 `dsh-evolve-preset` 且不含外部插件名、`host/` 全部能力模块（含 basic-terms）、客户端外壳 id、`assets/` 四个文件（三个自查脚本＋基础词条）、技能 frontmatter、私有痕迹、`.bak` 残留。
 
-`npm pack --dry-run` 清单应有：`index.js`、`host/` 六个模块、`lib/client.js`、`cordis.patch.yml`、`skills/`（两篇）、`assets/`（三个脚本）、`README.md`、`README.en.md`、`LICENSE`、`package.json`；`publish/`、`scripts/`、`src/` 的取舍见 `files` 字段，`publish/` 与 `scripts/` 不进包。
+`npm pack --dry-run` 清单应有：`index.js`、`host/` 全部能力模块（含 basic-terms）、`lib/client.js`、`cordis.patch.yml`、`skills/`（两篇）、`assets/`（三个脚本＋`basic-terms.md`）、`README.md`、`README.en.md`、`LICENSE`、`package.json`；`publish/`、`scripts/`、`src/` 的取舍见 `files` 字段，`publish/`、`scripts/` 不进包。
 
 ## 1. 发布
 
@@ -50,3 +50,4 @@ dsh plugin --profile desktop add dsh-evolve-preset
 
 - `customSkillDirs` 里的 `createRequire(baseUrl).resolve('dsh-evolve-preset/package.json')` 依赖 profile 的 node_modules 能解析到本包；从 GitHub 直装单个子包不可用，安装走 npm 或仓库里的 `scripts/install.mjs`。
 - 组合行里 `dsh-evolve-preset` 挂本包自身，本包缺失时该行会让整树挂载失败；发布时包内容必须完整。
+

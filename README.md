@@ -1,4 +1,4 @@
-# dsh-evolve-preset
+﻿# dsh-evolve-preset
 
 **中文** | [English](README.en.md)
 
@@ -18,9 +18,11 @@
 | 自查工具 | 工具 | `net-clean-check`、`profile-lint`、`gate-check` |
 | 设置页 | 设置页 + 宿主路由 | 思考提醒（起始秒数／复查间隔／内容／开关）、收尾检测开关、跨回合查询开关、上下文压缩插件提醒；设置存 `$DSH_HOME/evolve/evolution-settings.json` |
 | 计划模式入口 | 工具 | `enter_plan_mode`；组合里没有 planMode 服务时不注册 |
+| 基础词条 | 宿主钩子 | 字典通用层建好后，补一套进化模式基础词条；只补缺失，不覆盖、不删已有条目 |
 
 术语字典 `dsh-term-dict` 在 `dependencies` 里（要求 0.2.0 及以上）：安装本包时会一起拉下来；
 但它是独立插件，**不会自动挂载**——要用 `dict` 工具与词条检测，得在插件页把它装上并启用。
+启用之后，本包每次启动会把通用层里还缺的进化模式基础词条补进去（`assets/basic-terms.md` 16 条：进化模式、对齐栏、收尾检测、任务树、关卡、画像、验收、本层目标、根本目标、基本点、硬需求、软需求、任务、对象、词条、词典）；已有条目一条不动，写入前留 `general.md.bak`。字典还没建时不动——首建归 `dsh-term-dict`，它只在那时放自己的默认模板。
 
 ## 命令
 
@@ -38,7 +40,7 @@
 
 - **思考提醒**：起始秒数（5–600，默认 40）、复查间隔（5–120，默认 10）、内容（只列本层目标／完整对齐栏，默认只列本层目标）、总开关。到点就把当前这一版对齐栏初稿交出来——只列本层目标时，连目标都还没写出来也发，写「（还没写出来）」；完整对齐栏要求有目标，缺的项写「无」。
 - **收尾检测**：关掉后回复只出对齐栏与正文两块，五项检测不跑；开回来恢复第三块。
-- **对齐栏与收尾检测的渲染**：关掉后回复里看不到这两块——插件在渲染层把模型写出的两块剥掉，客户端与落盘都只剩正文；思考提醒也不再插对齐栏初稿。
+- **对齐栏与收尾检测的渲染**：关掉后这两块不再做成引用块（去引用块、去行名加粗），内容以普通正文留在回复里——客户端与落盘都是普通文字，一个字不丢；思考提醒也不再插对齐栏初稿。
 - **跨回合查询**：关掉后，会话检索、导出、恢复三件工具不可调用。
 - **上下文压缩插件提醒**：装了 `billion-context` 且在跑时，打开界面提示一次（设置页顶部另有横幅）。
 
@@ -97,12 +99,12 @@ dsh plugin --profile desktop add dsh-evolve-preset
 
 ## 结构
 
-- `index.js` —— 宿主入口：一个 apply 依次挂载 `host/` 下六块能力，单块失败不拖垮整包
-- `host/` —— 六块能力的宿主实现（task-tree、profile-inject、profile-panel、chat-density、check、plan-enter）
+- `index.js` —— 宿主入口：一个 apply 依次挂载 `host/` 下七块能力，单块失败不拖垮整包
+- `host/` —— 七块能力的宿主实现（basic-terms、task-tree、profile-inject、profile-panel、chat-density、check、plan-enter）
 - `lib/client.js` —— 浏览器半边：一个入口装三块 UI（任务树面板、画像面板、对齐栏样式）
 - `cordis.patch.yml` —— 模式声明＋组合行＋本包宿主行
 - `skills/` —— 两篇技能：`evolve-maintenance`（维护细则）、`task-tree-workflow`（任务树用法）
-- `assets/` —— 自查工具的三个脚本（随包发布，不引用外部目录）
+- `assets/` —— 自查工具的三个脚本，加一份基础词条 `basic-terms.md`（随包发布，不引用外部目录）
 
 ## 已知限制
 
@@ -127,3 +129,4 @@ dsh plugin --profile desktop add dsh-evolve-preset
 ## 许可
 
 MIT
+
