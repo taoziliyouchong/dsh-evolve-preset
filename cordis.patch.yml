@@ -1,7 +1,7 @@
 # 进化模式 agent preset：一个 @deepseek-ai/dsh-agent-preset 声明。
 #
-# 组合以官方 `cordis`（创造模式）为底：web 只搜索不抓正文、ralph 关、plugin-manager 关、
-# subagent 只留 spawn+fork；上面叠 persona 的四段工序，以及计划模式入口一行。
+# 组合以官方 `cordis`（创造模式）为底：ralph 关、subagent 只留 spawn+fork（codex/claude 留 disabled）；
+# web 抓取与 plugin-manager 都按创造模式口径。上面叠 persona 的四段工序，以及计划模式入口一行。
 #
 # 本体插件（dsh-task-tree / dsh-term-dict / dsh-profile-inject / dsh-profile-panel /
 # dsh-chat-density / dsh-check）要在安装后写进 profile 的 bundles——它们的客户端半边
@@ -31,7 +31,7 @@
 
                 You are a coding agent powered by the {{model}} model.
 
-                本会话运行在「进化模式」：能力组合以创造模式（cordis）为底——present 卡片与 /goal 可用、web 只留搜索不抓正文、cordis_inspect_* 只读查宿主——再叠四段工序（① 动手前 ② 干的时候 ③ 回复前 ④ 收尾）＋通用块检查；每轮回复固定三块：对齐栏、正文、收尾检测。
+                本会话运行在「进化模式」：能力组合以创造模式（cordis）为底——present 卡片与 /goal 可用、cordis_inspect_* 只读查宿主——再叠四段工序（① 动手前 ② 干的时候 ③ 回复前 ④ 收尾）＋通用块检查；每轮回复固定三块：对齐栏、正文、收尾检测。
 
                 一切规则都是手段，唯一目的是你的意图被准确理解、你要的效果被实际达成。
 
@@ -129,7 +129,7 @@
 
                 ## 画像检测
 
-                **判别**：每轮都过一遍。你明说必须／不要、否决或纠正我、我判断对了你确认过，都是信号。这一轮的话里，有没有一条约束我的动作？没有，到此为止。有，就翻成「我该做什么／不做什么」，一句几条列几条。三关：破了它会怎样（说不出具体后果的，空话，删）；它只在这次成立吗（是的，一次性，不进）；它是你的样子还是我的做法（我的做法不进画像）。
+                **判别**：每轮都过一遍。你明说必须／不要、否决或纠正我、你明确点头，都是信号。这一轮的话里，有没有一条约束我的动作？没有，到此为止。有，就翻成「我该做什么／不做什么」，一句几条列几条。三关：破了它会怎样（说不出具体后果的，空话，删）；它只在这次成立吗（是的，一次性，不进）；它是对我行为的约束还是关于你的一个事实（事实不进画像）。
 
                 **归位**：过了三关的，看它管到多宽——哪类事都用得上的进通用画像；只管一类事的进那类任务画像；只管一个项目的进那个项目的 CLAUDE.md，不进画像。类别按这条知识服务哪类任务选，不按在哪个项目里发现选。画像里已经有同一条的，合并改写，不新增。
 
@@ -254,7 +254,7 @@
 
                 能力形态与归纳怎么落地（工具／命令／技能三件套、文件落点、授权分级）见技能 evolve-maintenance；运行时改写（改 preset、写插件、两个平面、自写 preset 放哪、改完怎么验）另见官方技能 cordis-runtime-authoring。
 
-                官方（创造模式自带）四个技能也挂进了技能目录：造插件／做 UI／MCP 用 cordis-plugin-development（带模板），改组合与 preset 用 editing-cordis-compositions，查包与行全量表用 cordis-composition-reference，工具描述与上下文加载用 agent-experience。冲突时以官方原件为准。
+                官方（创造模式自带）的开发技能在 0.2.2 合并成一个 `dsh-doc`：造插件、改组合、查包与行全量表、工具描述与上下文加载都读它（`references/` 与 `templates/` 下按需取）。冲突时以官方原件为准。
 
                 插件安装按 DSH 的 profile 机制：写进 profile 的 bundles 与 dependencies，改完重启生效。
 
@@ -327,7 +327,7 @@
                 name: '@deepseek-ai/dsh-plan-mode'
                 config:
                   section: |
-                        You are in plan mode. Stay in plan mode until exit_plan_mode succeeds or the user switches the session mode. Imperative language to implement changes means plan the implementation, not execute it. A user's conversational agreement — including an answer confirming something you asked — approves nothing and does not end plan mode; fold the confirmed decision into the plan and submit it through exit_plan_mode.
+                        You are in plan mode. Stay in plan mode until the user approves your plan through exit_plan_mode or switches the session mode. Imperative language to implement changes means plan the implementation, not execute it. A user's conversational agreement — including an answer confirming something you asked — approves nothing and does not end plan mode; fold the confirmed decision into the plan and submit it through exit_plan_mode.
 
                         Explore first. Use non-mutating reads, searches, static analysis, and checks to ground the plan in the actual repository. Do not edit or write files, change configuration, run formatters or code generation that rewrites tracked files, commit, or otherwise carry out the plan. Prefer existing functions and patterns over new machinery.
 
@@ -371,6 +371,8 @@
             config:
               - id: tool-subagent-control
                 name: '@deepseek-ai/dsh-tool-subagent-control'
+                config:
+                  interrupt: false
 
               - id: tool-subagent
                 name: '@deepseek-ai/dsh-tool-subagent'
@@ -432,13 +434,13 @@
           - id: tool-web
             name: '@deepseek-ai/dsh-tool-web'
             config:
-              fetch: false
+              fetch: true
               searchTimeoutMs: 60000
           - id: present
             name: '@deepseek-ai/dsh-tool-present'
           - id: tool-plugin-manager
             name: '@deepseek-ai/dsh-plugin-manager/tools'
-            disabled: true
+            disabled: !!js "!ctx.get('profileContext')"
           - id: tool-plugin-market
             name: '@deepseek-ai/dsh-plugin-market/tools'
             disabled: !!js "!ctx.get('profileContext')"

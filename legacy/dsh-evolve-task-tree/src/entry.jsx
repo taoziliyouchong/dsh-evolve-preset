@@ -226,6 +226,8 @@ const CSS = `
 .ztt-error { margin:0; font-size:12px; color:var(--dsw-alias-state-error-primary); word-break:break-all; }
 .ztt-foot { display:flex; flex-direction:column; gap:3px; }
 .ztt-footitem { font-size:11.5px; line-height:1.5; color:var(--dsw-alias-label-secondary); }
+/* 正文里已经有对齐栏时，自动插入的那版不再占屏（样式与正文一致，不另画一套） */
+.ztt-latebar-hidden { display:none !important; }
 `
 
 /** 注入一次样式。 */
@@ -236,6 +238,54 @@ function ensureStyle() {
   style.id = STYLE_ID
   style.textContent = CSS
   document.head.appendChild(style)
+}
+
+/**
+ * 聊天流里的「自动插入」那版质询卡：
+ *  - 不改它的渲染样式，正文对齐栏怎么画它就怎么画；
+ *  - 正文里一旦出现对齐栏，这版就不再显示（有正式版就不留草稿）；
+ *  - 一轮里出现多版草稿时只显示最后一版（第二版代替第一版，不并排）。
+ * 宿主没有单块渲染座位，所以按文本特征认块：草稿=开头「思考超过」且含「自动插入」；
+ * 正文对齐栏=开头含「本层目标」且不含「自动插入」。
+ */
+const LATE_BAR_CLASS = 'ztt-latebar'
+const LATE_BAR_HIDDEN = 'ztt-latebar-hidden'
+function installLateBarPaint() {
+  if (typeof document === 'undefined' || typeof MutationObserver !== 'function') return
+  const mark = () => {
+    let blocks
+    try {
+      blocks = document.querySelectorAll('blockquote')
+    } catch {
+      return
+    }
+    const drafts = []
+    const reals = []
+    for (const el of blocks) {
+      const head = String(el.textContent || '').slice(0, 60)
+      if (head.includes('思考超过') && head.includes('自动插入')) {
+        if (!el.classList.contains(LATE_BAR_CLASS)) el.classList.add(LATE_BAR_CLASS)
+        drafts.push(el)
+      } else if (head.includes('本层目标')) {
+        reals.push(el)
+      }
+    }
+    // 只认「这条草稿之后」出现的正文对齐栏：同一轮正文在草稿后面，历史里也同理。
+    // 一轮里目标变了会再插一版，屏上只留最后一版——第二版代替第一版，不并排。
+    for (let i = 0; i < drafts.length; i += 1) {
+      const el = drafts[i]
+      const laterDraft = i < drafts.length - 1
+      const laterReal = reals.some((r) => !!(el.compareDocumentPosition(r) & Node.DOCUMENT_POSITION_FOLLOWING))
+      el.classList.toggle(LATE_BAR_HIDDEN, laterDraft || laterReal)
+    }
+  }
+  mark()
+  try {
+    const mo = new MutationObserver(() => mark())
+    mo.observe(document.body, { childList: true, subtree: true })
+  } catch {
+    /* 观察不了就只标当前这批 */
+  }
 }
 
 /** 拼路由（锚 document.baseURI，保留查询串——只取 pathname 会把 ?sessionId 丢掉）。 */
@@ -1141,6 +1191,7 @@ const TAB_DEFINITION = {
  */
 export function apply(ctx) {
   ensureStyle()
+  installLateBarPaint()
 
   // 1) tab 类型：等 sidebarRightTabs 服务进上下文再注册（apply 期通常还没有）。
   const registerType = () => {

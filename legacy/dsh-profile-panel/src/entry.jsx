@@ -1336,7 +1336,11 @@ export const inject = ['slots']
 
 /**
  * 把面板挂进设置页，并在输入栏右侧放「画像·注／禁」。
- * 设置页用内置那页的 id（user-profile）：list 槽同 id 是「占位替换」，不会并排出现两页。
+ * 设置页沿用内置那页的 id（user-profile），但必须给「更低的 priority」才替换得掉：
+ * 插槽按 (id, priority) 判重，同 id 且同 priority 会直接抛
+ * `list slot "settings.section" already has an entry with id "user-profile" at priority 0`；
+ * 只有 priority 不同才允许共存，且最低的那条渲染（报错原文：lowest renders）。
+ * 所以这里用 -1 盖掉内置页：既不抛错，也不会并排出现两页。
  * @param ctx - 客户端根上下文。
  */
 export function apply(ctx) {
@@ -1345,6 +1349,7 @@ export function apply(ctx) {
   ctx.slots.inject('settings.section', () => ctx.slots.register({
     name: 'settings.section',
     id: 'user-profile',
+    priority: -1,
     order: 30,
     label: '用户画像',
   }, ProfilePanel))

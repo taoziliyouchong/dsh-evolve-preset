@@ -423,16 +423,19 @@ function guardBefore(sessionId, action) {
     return { blocked: true, count: next, action, warn: '', settle: () => {} }
   }
   const warn = next >= GUARD_FROM
-    ? `连续第 ${next} 次修改节点、期间没有建立新的目标——这次放行，下一次（第 ${next + 1} 次）会被拦下。要解除：action=new 立根或 action=add 挂一支新目标，计数即清零。`
+    ? `连续第 ${next} 次修改节点，期间没立新目标——这次放行，下一次会被拦下。`
+      + `顺手确认：这一轮做的事能不能单独验收？能就 action=add／new 立节点，不能就归在现有那一步里。`
     : ''
   return { blocked: false, count: next, action, warn, settle: () => persistGuard(sessionId, next, action) }
 }
 
-/** 被拦时的错误文案（直接抛给模型看）。 */
+/** 被拦时的错误文案（直接抛给模型看）：先让它判断「这事能不能单独成节点」，再说怎么解除。 */
 function guardBlockText(count, action) {
-  return `任务树写入被拦下：连续第 ${count} 次修改节点（这次是 ${action}）、期间没有建立新的目标——第 ${count} 次不允许写入。`
-    + `下一次（第 ${count + 1} 次）会放行但仍提示，第 ${count + 2} 次再拦，如此交替。`
-    + `解除办法：建立一个新目标——action=new title=<根任务> 立根，或 action=add parent=<父 id> serves=<…> title=<…> 挂一支；成功即清零。`
+  return `任务树写入被拦下：连续第 ${count} 次修改节点（这次是 ${action}），期间没立新目标。`
+    + `先确认一件事：这一轮做的事，能不能单独说一句「这件事完了」？`
+    + `能 → 它该是一个节点：action=add 挂到父下（parent、serves 写清），或 action=new 立根；`
+    + `不能 → 它只是现有那一步里的动作，别硬拆成节点，把这一版对齐栏改完就够。`
+    + `解除：add／new 成功即清零。`
 }
 
 /** 列出所有会话的树（/… --all 用）。 */
@@ -943,7 +946,8 @@ function replyAlignBlock(block, gate) {
 const LATE_BAR_INDEX = 900000
 const LATE_BAR_ARM_TTL = 5 * 60 * 1000
 
-/** 每个会话当前这一轮的挂载点：{ turn, at }；turn 开始时挂上，插过一版就置 fired。 */
+/** 每个会话当前这一轮的挂载点：{ turn, at, fired, done, lastKey, count, seen }。
+ *  turn 开始时挂上；插过一版置 fired，lastKey 记那版内容；目标变了同一轮还会再插一版。 */
 const lateBarArms = new Map()
 
 /** 思考提醒的起始秒数（设置页可改，默认 40 秒，夹在 5–600）。 */
@@ -981,7 +985,7 @@ function renderBarsEnabled() {
 }
 
 /**
- * 这一层四样还缺哪几项：空着就是缺；四样齐了才发 40 秒质询。
+ * 这一层四样还缺哪几项：空着就是缺；四样齐了才取消思考质询。
  * 「无」是写明的「一项都没有」，算写齐（捕获回路会原样保留它）。
  */
 function alignGaps(align) {
@@ -995,23 +999,29 @@ function alignGaps(align) {
 }
 
 /**
- * 40 秒初稿插入（2026-11-14 口径）：到点就把当前这一版对齐栏初稿交出去——
- * 只列本层目标时，目标还没写出来也发，写「（还没写出来）」；完整对齐栏仍要求有目标。
- * 连树都没有才返回空串，由 lateBarStream 隔「复查间隔」再看一次。
+ * 思考提醒初稿（2026-11-19 口径：到点必贴、每「复查间隔」质询、真目标到了替换）：
+ * 到设定时间先贴一版——树里有目标就贴目标，还没有就写「（还没写出来）」；
+ * 之后每「复查间隔」再看一次，目标写进来或变了就再发一版（key 变），客户端只留最后一版。
+ * 返回 null＝这棵树这版没东西可贴；{ key, text } 供比对。
  */
-function draftAlignText(sessionId, elapsedSec) {
+function draftAlignState(sessionId, elapsedSec) {
   const rec = loadTree(sessionId)
-  if (!rec) return ''
-  const align = alignOf(rec)
-  const goal = String((align && align.goal) || '').trim()
+  if (!rec) return null
+  const align = alignOf(rec) || {}
+  const goal = String(align.goal || '').trim()
   const sec = Number.isFinite(elapsedSec) ? Math.round(elapsedSec) : lateBarSeconds()
+  // 比对只认内容，不认「思考超过 N 秒」那行——秒数每次都在变，拿来比对会一直重发。
+  const key = JSON.stringify([goal, align.points || [], align.hard || '', align.soft || ''])
   if (lateBarContent() === 'goal') {
     // goal 模式也带「思考超过 · 自动插入」字样——客户端按这两个词认草稿卡（installLateBarPaint）；
     // 不带就被当成正式对齐栏压小压淡，正文里等于看不见。目标还没写出来也发，写「（还没写出来）」。
-    return '> ⏳ 思考超过 ' + sec + ' 秒 · 自动插入 · 本层目标初稿（正文随后）\\\n'
-      + '> **本层目标**：' + (goal || '（还没写出来）') + '\\\n\n'
+    return {
+      key,
+      text: '> ⏳ 思考超过 ' + sec + ' 秒 · 自动插入 · 本层目标初稿（正文随后）\\\n'
+        + '> **本层目标**：' + (goal || '（还没写出来）') + '\\\n\n',
+    }
   }
-  if (!goal) return ''
+  if (!goal) return null
   const block = renderAlignBlock(rec, null, align)
   // 与正式回复的对齐栏同款：引用块 + 行末反斜杠。
   // 纯文本单换行会被 Markdown 当软换行拼成一行（实测），必须靠引用块与硬换行保住分行。
@@ -1021,7 +1031,16 @@ function draftAlignText(sessionId, elapsedSec) {
     .map((l) => `> ${l}\\`)
     .join('\n')
   // 两头标「自动插入」——这块不是正文，模型别照着再写一张，人也要一眼分出哪版是插的。
-  return `> ⏳ 思考超过 ${sec} 秒 · 自动插入 · 先把这一版对齐栏初稿交给你（正文随后）\\\n${quoted}\n> —— 自动插入结束，正文继续 ——\\\n\n`
+  return {
+    key,
+    text: `> ⏳ 思考超过 ${sec} 秒 · 自动插入 · 先把这一版对齐栏初稿交给你（正文随后）\\\n${quoted}\n> —— 自动插入结束，正文继续 ——\\\n\n`,
+  }
+}
+
+/** 只要文本的薄壳（工具与自检用）；没有可发的就返回空串。 */
+function draftAlignText(sessionId, elapsedSec) {
+  const draft = draftAlignState(sessionId, elapsedSec)
+  return draft ? draft.text : ''
 }
 
 /**
@@ -1039,18 +1058,23 @@ function armLateBar(sessionId, turn) {
   const current = lateBarArms.get(sessionId)
   if (current && current.turn === turn && !current.done) return
   if (presetMarkerOf(sessionId) === 'other') return
-  lateBarArms.set(sessionId, { turn, at: Date.now(), fired: false, done: false })
+  lateBarArms.set(sessionId, { turn, at: Date.now(), fired: false, done: false, lastKey: '', count: 0, seen: Date.now() })
 }
 
 /**
  * 包住一条模型输出流：到检查点（起始秒数起，每隔「复查间隔」一次）现读树里的对齐栏——
- * 四样齐了才插一版；没齐就等下一个检查点，直到插过、或模型先吐出正文/工具调用。
- * 注入块用独立序号；模型自己的块序号不变。onInject 在真的插进去时回调一次（挂载点置 fired）。
+ * 到点先贴一版（没目标写「（还没写出来）」），之后每隔「复查间隔」再看；
+ * 内容变了（占位→真目标、目标改了口径）就再发一版、序号递增。
+ * 客户端只显示最后一版草稿（第二版代替第一版），会话档保留每一版。
+ * 注入块必须在模型开始吐正文／工具调用之前，吐了就 halt——下一段流开头再补。
+ * 注入块用独立序号；模型自己的块序号不变。
  */
-async function* lateBarStream(source, sessionId, dueIn, startedAt, onInject, retryMs) {
+async function* lateBarStream(source, sessionId, dueIn, startedAt, onInject, retryMs, state) {
   const iter = source[Symbol.asyncIterator]()
   const baseAt = Number.isFinite(startedAt) ? startedAt : Date.now()
   const retry = Number.isFinite(retryMs) && retryMs > 0 ? retryMs : lateBarRetrySeconds() * 1000
+  // 一轮里跨多条流共用的状态：lastKey＝上次发的那版内容，count＝已发几版（决定块序号）。
+  const st = state && typeof state === 'object' ? state : {}
   let nextAt = Date.now() + Math.max(0, dueIn)
   let stop = false
   let pending = null
@@ -1075,22 +1099,29 @@ async function* lateBarStream(source, sessionId, dueIn, startedAt, onInject, ret
       if (timer && typeof timer.unref === 'function') timer.unref()
     })
   }
-  const emitDraft = function* (text) {
+  const emitDraft = function* (draft) {
+    const index = LATE_BAR_INDEX + (Number(st.count) || 0)
+    st.count = (Number(st.count) || 0) + 1
+    st.lastKey = draft.key
+    st.fired = true
     if (typeof onInject === 'function') onInject()
-    yield { type: 'block-start', index: LATE_BAR_INDEX, blockType: 'text' }
-    yield { type: 'text-delta', index: LATE_BAR_INDEX, text }
-    yield { type: 'block-end', index: LATE_BAR_INDEX, block: { type: 'text', text } }
+    yield { type: 'block-start', index, blockType: 'text' }
+    yield { type: 'text-delta', index, text: draft.text }
+    yield { type: 'block-end', index, block: { type: 'text', text: draft.text } }
+  }
+  /** 有内容、且这一版和上次发的不一样，才返回要插的那版。 */
+  const takeDraft = () => {
+    const draft = draftAlignState(sessionId, (Date.now() - baseAt) / 1000)
+    if (!draft) return null
+    if (draft.key === st.lastKey) return null
+    return draft
   }
   try {
-    // 已经过了 40 秒（例如后面的步骤才接上）：先当场看一次，有草稿就插。
+    // 已经过了起始秒数（例如后面的步骤才接上）：先当场贴一版，之后按复查间隔继续看。
     if (dueIn <= 0) {
-      const first = draftAlignText(sessionId, (Date.now() - baseAt) / 1000)
-      if (first) {
-        halt()
-        yield* emitDraft(first)
-      } else {
-        nextAt = Date.now() + retry
-      }
+      const first = takeDraft()
+      if (first) yield* emitDraft(first)
+      nextAt = Date.now() + retry
     }
     schedule()
     for (;;) {
@@ -1101,15 +1132,11 @@ async function* lateBarStream(source, sessionId, dueIn, startedAt, onInject, ret
       ])
       if (raced.timeout) {
         if (stop) continue
-        // 有草稿才插；没有就往后挪一个检查点。
-        const text = draftAlignText(sessionId, (Date.now() - baseAt) / 1000)
-        if (text) {
-          halt()
-          yield* emitDraft(text)
-        } else {
-          nextAt += retry
-          schedule()
-        }
+        // 每「复查间隔」看一次：内容变了才补一版（占位 → 真目标、目标改了口径都算）。
+        const draft = takeDraft()
+        if (draft) yield* emitDraft(draft)
+        nextAt = Date.now() + retry
+        schedule()
         continue
       }
       const { value, done } = raced.v
@@ -1142,14 +1169,18 @@ function installLateBar(ctx) {
       const stream = barsOff ? filterBarStream(source) : source
       if (barsOff || !lateBarEnabled()) return stream
       const arm = lateBarArms.get(sid)
-      if (!arm || arm.fired || arm.done) return stream
-      if (Date.now() - arm.at > LATE_BAR_ARM_TTL) {
+      if (!arm || arm.done) return stream
+      // 一轮里可以补发——目标变了就再插一版，客户端只留最后一版（第二版代替第一版）；
+      // 发过的内容没变由 lateBarStream 比对 lastKey 挡掉，所以这里不再看 fired。
+      const lastSeen = Number.isFinite(arm.seen) ? arm.seen : arm.at
+      if (Date.now() - lastSeen > LATE_BAR_ARM_TTL) {
         lateBarArms.delete(sid)
         return stream
       }
-      // 不在这里取内容：到点后由 lateBarStream 现读树里的草稿；没草稿就等下一个检查点。
+      arm.seen = Date.now()
+      // 不在这里取内容：到点后由 lateBarStream 现读树；目标没写出来就等下一个检查点。
       const dueIn = arm.at + lateBarSeconds() * 1000 - Date.now()
-      return lateBarStream(stream, sid, dueIn, arm.at, () => { arm.fired = true })
+      return lateBarStream(stream, sid, dueIn, arm.at, null, null, arm)
     }, { global: true, prepend: true })
   } catch {
     /* 挂不上：功能不生效，不影响树的其余部分 */
@@ -1313,7 +1344,7 @@ function renderInject(rec, alignMode = true) {
   }
   if (autoRoot) {
     lines.push(alignMode
-      ? `  ⚠ 根还是占位「${autoRoot.title}」：还没写目标就先 action=align（或 action=new）把这一轮的目标写进树，再调别的工具——40 秒草稿只读树，树空着就没有可显示的内容。`
+      ? `  ⚠ 根还是占位「${autoRoot.title}」：还没写目标就先 action=align（或 action=new）把这一轮的目标写进树，再调别的工具——思考提醒只读树，树里没目标就先写「（还没写出来）」，你写进去之后它会换成真目标。`
       : `  ⚠ 根还是占位「${autoRoot.title}」：要立树就 action=align 写目标，或 action=new 换成本次任务。`)
   }
   let count = 0
@@ -1582,8 +1613,8 @@ function parseAlignBlock(text) {
   }
   // 有新写法的「本层目标」就用它（那是当前节点的目标）；只有根上才退回「根本目标」。
   let goal = grab(/^\s*>?\s*本层目标[：:]\s*(.+)$/) || grab(/^\s*>?\s*根本目标[：:]\s*(.+)$/)
-  // 捕获回路去序号：回复里的硬需求/软需求带 ①② 前缀，原样存回会被渲染再加一次（侧栏出现 ①①）；
-  // 「无」表示一项都没有，存空串，渲染才会写成「无」而不是「①无」。
+  // 捕获回路去序号：回复里的硬需求/软需求带 ①② 前缀，原样存回会被渲染再加一次（侧栏出现 ①①）。
+  // 「无」原样保留——质询按四样齐没齐决定去留，丢掉「无」会让写「无」的层被永远质询。
   const stripMark = (s) => String(s).replace(/^[①-⑳]\s*/, '').trim()
   // 硬需求／软需求在回帖里是「一行一条」：首行带标签、续行以 ②③… 开头。
   // 2026-11-08 修：原来只抓标签那一行，续行全丢——捕获回路每轮回写会把硬/软需求截成只剩第一条，
@@ -1605,7 +1636,7 @@ function parseAlignBlock(text) {
     if (want === 'hard') hardItems.push(item)
     else softItems.push(item)
   }
-  const joinItems = (list) => list.map(stripMark).filter((s) => s !== '' && s !== '无').join('｜')
+  const joinItems = (list) => list.map(stripMark).filter((s) => s !== '').join('｜')
   let hard = joinItems(hardItems)
   let soft = joinItems(softItems)
   const points = []
@@ -1645,6 +1676,9 @@ function parseAlignBlock(text) {
     }
   }
   if (!goal || goal.length < 4 || goal.length > 400) return null
+  // 占位模板不是模型提交的对齐栏：草稿在树空时可能长这样（本层目标=（待填））。
+  // 漏到这里会把树写脏，任务节点再也不会显示正式版。
+  if (/^[（(]待填[）)]$/.test(goal)) return null
   const pts = points
     .map((p) => String(p).trim().replace(/^[①-⑳]\s*/, '').replace(/^\d+[.、]\s*/, '').trim())
     .filter((p) => p !== '' && p.length <= 200)
@@ -1664,6 +1698,20 @@ function parseAlignBlockLast(text) {
   for (const m of raw.matchAll(re)) last = m.index
   if (last < 0) return parseAlignBlock(raw)
   return parseAlignBlock(raw.slice(last))
+}
+
+/**
+ * 从一条 assistant 消息的 content 里剔掉插件插的草稿块。
+ * 草稿块也躺在这条消息里，它不是模型提交的对齐栏：整条拼接会把草稿当成正式版回写；
+ * 正文没写对齐栏时，任务节点就永远停在草稿那版（树空时是「（还没写出来）」／无）。
+ * 只认块级结构：插件的草稿块以「> ⏳ 思考超过 N 秒」开头，与模型正文格式无关。
+ */
+function stripDraftBlocks(content) {
+  const isDraftBlock = (text) => /^\s*>\s*⏳\s*思考超过\s*\d+\s*秒/.test(String(text || ''))
+  return (Array.isArray(content) ? content : [])
+    .filter((b) => b && b.type === 'text' && !isDraftBlock(b.text))
+    .map((b) => b.text || '')
+    .join('\n')
 }
 
 /**
@@ -1727,7 +1775,7 @@ function captureAlignFromReply(sessionId, cwd) {
     }
     const c = o && o.data && o.data.message && o.data.message.content
     if (!Array.isArray(c)) continue
-    const t = c.filter((b) => b && b.type === 'text').map((b) => b.text || '').join('\n')
+    const t = stripDraftBlocks(c)
     if (t.trim()) reply = t
   }
   try {

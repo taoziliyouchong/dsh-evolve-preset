@@ -22,7 +22,7 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// packages/dsh-profile-panel/src/entry.jsx
+// legacy/dsh-profile-panel/src/entry.jsx
 var entry_exports = {};
 __export(entry_exports, {
   ProfilePanel: () => ProfilePanel,
@@ -33,7 +33,7 @@ __export(entry_exports, {
 module.exports = __toCommonJS(entry_exports);
 var import_react = require("react");
 
-// packages/dsh-profile-panel/src/profile-text.js
+// legacy/dsh-profile-panel/src/profile-text.js
 var TITLE_RE = /^#\s+(.*)$/;
 var SECTION_RE = /^([一二三四五六七八九十百]+)、\s*([\s\S]*)$/;
 var ITEM_RE = /^(\d+)\.(\s*)([\s\S]*)$/;
@@ -251,7 +251,7 @@ function stats(paras) {
   return { chars, entries: countEntries(paras), sections: sections(paras).length };
 }
 
-// packages/dsh-profile-panel/src/entry.jsx
+// legacy/dsh-profile-panel/src/entry.jsx
 var import_jsx_runtime = require("react/jsx-runtime");
 function api(path) {
   const relative = String(path).replace(/^\/+/, "");
@@ -1556,6 +1556,7 @@ function apply(ctx) {
   ctx.slots.inject("settings.section", () => ctx.slots.register({
     name: "settings.section",
     id: "user-profile",
+    priority: -1,
     order: 30,
     label: "\u7528\u6237\u753B\u50CF"
   }, ProfilePanel));

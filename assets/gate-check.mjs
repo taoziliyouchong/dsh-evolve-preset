@@ -7,7 +7,7 @@
  *   node gate-check.mjs --init --session <id>      生成/重置模板（$DSH_HOME/gate/<id>.md）
  *   node gate-check.mjs --file <模板.md>            校验模板（不删文件）
  *
- * 每节判三条：① 正文非空白字符 ≥ 10；② 有一行 EVID: 指针；③ 指针合法且文件类真实存在。
+ * 每节判三条：① 正文非空白字符 ≥ 10（EVID 指针本身不参与字数统计）；② 有一行 EVID: 指针；③ 指针合法且文件类真实存在。
  * 只靠 SKIP 凑数的：SKIP 超过 2 节判整轮没做；全过才退出码 0。
  * 文件留档：校验不删；下一次 --init 覆盖清掉。
  */
@@ -42,17 +42,17 @@ function arg(name, def) {
 }
 
 function template(sessionId) {
-  const head = `# 关卡勾稽 · ${sessionId}\n\n> 节名照下：## 01 原件 … ## 07 升级与归纳。每节：正文 ≥ ${MIN_CHARS} 个非空白字符 + 一行 EVID: 指针（文件:行 / tool:名字{参数} / cmd:命令 / SKIP:理由）。\n> 前五节动手前写完，落盘、升级与归纳先写「${PLACEHOLDER}」，回帖前补成实据再校验。校验不删文件，下一次 init 覆盖。\n\n`
+  const head = `# 关卡勾稽 · ${sessionId}\n\n> 节名照下：## 01 原件 … ## 07 升级与归纳。每节：正文 ≥ ${MIN_CHARS} 个非空白字符（EVID 指针行不计入）+ 一行 EVID: 指针（文件:行 / tool:名字{参数} / cmd:命令 / SKIP:理由）。\n> 前五节动手前写完，落盘、升级与归纳先写「${PLACEHOLDER}」，回帖前补成实据再校验。校验不删文件，下一次 init 覆盖。\n\n`
   const body = SECTIONS.map(([no, title]) => `## ${no} ${title}\n` + 'EVID:' + '\n结论：\n').join('\n')
   return head + body
 }
 
 function countChars(s) {
-  // 只算实质内容：去掉 EVID 行与「结论：」这类空标签，避免模板自带的字凑数
+  // 只算实质内容：EVID 指针本身不参与字数统计（整行指针行、正文里夹带的 EVID: 之后那段都剔掉），
+  // 「结论：」这类空标签也不计，避免模板自带的字凑数
   const kept = (s || '')
     .split(/\r?\n/)
-    .filter((l) => !/^\s*EVID[:：]/i.test(l))
-    .map((l) => l.replace(/^\s*结论[:：]\s*$/, ''))
+    .map((l) => l.replace(/^\s*结论[:：]\s*$/, '').replace(/EVID[:：].*$/i, ''))
     .join('')
   return kept.replace(/\s/g, '').length
 }

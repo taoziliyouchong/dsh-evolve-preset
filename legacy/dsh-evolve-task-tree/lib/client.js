@@ -22,7 +22,7 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// src/entry.jsx
+// legacy/dsh-evolve-task-tree/src/entry.jsx
 var entry_exports = {};
 __export(entry_exports, {
   TaskTreeTab: () => TaskTreeTab,
@@ -205,6 +205,8 @@ var CSS = `
 .ztt-error { margin:0; font-size:12px; color:var(--dsw-alias-state-error-primary); word-break:break-all; }
 .ztt-foot { display:flex; flex-direction:column; gap:3px; }
 .ztt-footitem { font-size:11.5px; line-height:1.5; color:var(--dsw-alias-label-secondary); }
+/* \u6B63\u6587\u91CC\u5DF2\u7ECF\u6709\u5BF9\u9F50\u680F\u65F6\uFF0C\u81EA\u52A8\u63D2\u5165\u7684\u90A3\u7248\u4E0D\u518D\u5360\u5C4F\uFF08\u6837\u5F0F\u4E0E\u6B63\u6587\u4E00\u81F4\uFF0C\u4E0D\u53E6\u753B\u4E00\u5957\uFF09 */
+.ztt-latebar-hidden { display:none !important; }
 `;
 function ensureStyle() {
   if (typeof document === "undefined") return;
@@ -213,6 +215,42 @@ function ensureStyle() {
   style.id = STYLE_ID;
   style.textContent = CSS;
   document.head.appendChild(style);
+}
+var LATE_BAR_CLASS = "ztt-latebar";
+var LATE_BAR_HIDDEN = "ztt-latebar-hidden";
+function installLateBarPaint() {
+  if (typeof document === "undefined" || typeof MutationObserver !== "function") return;
+  const mark = () => {
+    let blocks;
+    try {
+      blocks = document.querySelectorAll("blockquote");
+    } catch {
+      return;
+    }
+    const drafts = [];
+    const reals = [];
+    for (const el of blocks) {
+      const head = String(el.textContent || "").slice(0, 60);
+      if (head.includes("\u601D\u8003\u8D85\u8FC7") && head.includes("\u81EA\u52A8\u63D2\u5165")) {
+        if (!el.classList.contains(LATE_BAR_CLASS)) el.classList.add(LATE_BAR_CLASS);
+        drafts.push(el);
+      } else if (head.includes("\u672C\u5C42\u76EE\u6807")) {
+        reals.push(el);
+      }
+    }
+    for (let i = 0; i < drafts.length; i += 1) {
+      const el = drafts[i];
+      const laterDraft = i < drafts.length - 1;
+      const laterReal = reals.some((r) => !!(el.compareDocumentPosition(r) & Node.DOCUMENT_POSITION_FOLLOWING));
+      el.classList.toggle(LATE_BAR_HIDDEN, laterDraft || laterReal);
+    }
+  };
+  mark();
+  try {
+    const mo = new MutationObserver(() => mark());
+    mo.observe(document.body, { childList: true, subtree: true });
+  } catch {
+  }
 }
 function api(path) {
   const relative = String(path).replace(/^\/+/, "");
@@ -1037,6 +1075,7 @@ var TAB_DEFINITION = {
 };
 function apply(ctx) {
   ensureStyle();
+  installLateBarPaint();
   const registerType = () => {
     try {
       const tabs = typeof ctx.get === "function" ? ctx.get("sidebarRightTabs") : void 0;
