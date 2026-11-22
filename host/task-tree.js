@@ -528,6 +528,31 @@ function normalizeAlign(raw) {
 }
 
 /**
+ * 这一轮 align 有没有实质内容变更（goal／accept／points／hard／soft 任一不同）。
+ * 只补 gate 的回填不算：每轮收口都会补一次校验结论，那是固定动作，不是「反复改需求」。
+ * 换落点节点（id 变了）算变更。
+ */
+function alignContentChanged(existing, patch) {
+  const prev = normalizeAlign(existing && existing.align) || { goal: '', accept: '', points: [], hard: '', soft: '' }
+  const next = {
+    goal: patch.goal !== undefined ? pick(patch.goal) : prev.goal,
+    accept: patch.accept !== undefined ? pick(patch.accept) : prev.accept,
+    points: patch.points !== undefined ? pointsFromArg(patch.points) : prev.points,
+    hard: patch.hard !== undefined ? pick(patch.hard) : prev.hard,
+    soft: patch.soft !== undefined ? pick(patch.soft) : prev.soft,
+  }
+  const wantId = pick(patch.id)
+  const prevNodeId = pick(existing && existing.align && existing.align.nodeId)
+  if (wantId && prevNodeId && wantId !== prevNodeId) return true
+  return prev.goal !== next.goal
+    || prev.accept !== next.accept
+    || prev.hard !== next.hard
+    || prev.soft !== next.soft
+    || prev.points.length !== next.points.length
+    || prev.points.some((p, i) => p !== next.points[i])
+}
+
+/**
  * 反推闸门（2026-11-05）：新立或纠偏时，硬需求里必须留下走过「从目标反推」的痕迹——
  * 要么带〔反推…〕标记，要么写「反推无新增」。没有硬需求的层不拦。
  * 只在这两个时机拦：平时每轮 align 都校验会把「这一轮没改硬需求」的正常推进全堵死。
@@ -930,7 +955,8 @@ function renderAlignBlock(rec, target, align) {
 function replyAlignBlock(block, gate) {
   const lines = String(block).split('\n').filter((l) => l.trim() !== '')
   const quoted = lines.map((l) => `> ${l}\\`)
-  quoted.push(`> **关卡**：${String(gate).trim()}\\`)
+  // gate 可以空：动手前那一版还没校验，照实写「待校验」，收口那次 align 再补真结论。
+  quoted.push(`> **关卡**：${pick(gate) || '待校验'}\\`)
   return quoted.join('\n')
 }
 
@@ -2211,7 +2237,7 @@ export function apply(ctx) {
         points: { type: 'string', description: '这一层的基本点，多条用「｜」分隔（对齐栏与卡片展开都显示它）' },
         hard: { type: 'string', description: '这一层的硬需求（不容更改的那几条，多条用「｜」分隔）' },
         soft: { type: 'string', description: '这一层的软需求（可换可弃的方向项，多条用「｜」分隔）' },
-        gate: { type: 'string', description: '对齐栏「关卡」行（align 必填）：全过写「15/15 ✅」，有没过的写「13/15（③⑥未过）」；工具拿它把四样连关卡拼成回帖可直接照抄的整块' },
+        gate: { type: 'string', description: '对齐栏「关卡」行：全过写「7/7 ✅」，有没过的写「5/7（③⑥未过）」。动手前那一版可以不传（渲染成「待校验」），收口校验后再补一次；工具拿它把四样连关卡拼成回帖可直接照抄的整块' },
         force: { type: 'boolean', description: '仅 align 用：覆盖用户刚在侧栏改过的版本，或确认目标纠偏（根目标写偏了要改回，同一条任务不是换任务）——两种情况都带 true，并先复述你理解成什么；纠偏时原来那句会留一行（带 why 记偏在哪）' },
         items: { type: 'array', items: { type: 'string' }, description: 'tail 用：收尾检测的条目，一条一项（如「画像：无新增。」「词条：无。」「待确认：…」）' },
       status: { type: 'string', enum: ['active', 'pending', 'done', 'obsolete'], description: '节点状态：active 运行中（正在做的那一支；界面上全树只显示一个「运行中」，其余未完成的显示「排队中」）／pending 排队中（已列出、等轮到的）／done 已定（做完且验收）／obsolete 已废（留在树上、灰暗、不参与运行）' },
@@ -2263,11 +2289,9 @@ export function apply(ctx) {
         // 纠偏（force）＝重推硬需求，正是该跑反推的时候：这里拦一道，平时轮次的推进不拦。
         if (args.force === true) assertReverseDerivation(args.hard, 'align')
         const gate = pick(args.gate)
-        if (!gate) {
-          throw new Error('align 需要 gate：对齐栏「关卡」行（全过写「15/15 ✅」，有没过的写「13/15（③⑥未过）」）。工具拿它把四样连关卡拼成回帖可直接照抄的整块；缺了就会少一行、格式漂移')
-        }
-        // 连续修改护栏：第 3 次报提示并拒写；第 4 次放行仍提示；第 5 次再拒——new/add 清零。
-        const guard = guardBefore(sessionId, 'align')
+        // 连续修改护栏只对实质内容变更计数：收口补 gate 是每轮的固定动作，不是反复改需求。
+        // 第 3 次报提示并拒写；第 4 次放行仍提示；第 5 次再拒——new/add 清零。
+        const guard = alignContentChanged(loadTree(sessionId), args) ? guardBefore(sessionId, 'align') : null
         if (guard && guard.blocked) throw new Error(guardBlockText(guard.count, 'align'))
         const recBefore = loadTree(sessionId)
         const wasAutoRoot = !!(recBefore && isAutoRoot(recBefore))

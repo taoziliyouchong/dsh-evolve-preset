@@ -1,6 +1,6 @@
 {
   "name": "dsh-evolve-preset",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "description": "进化模式：DSH 的 agent 模式。模型每轮先对齐目标与边界再动手，回复固定对齐栏、正文、收尾检测三块；任务树、画像注入与面板、自查工具、计划模式入口一个包装齐。",
   "type": "module",
   "main": "index.js",
